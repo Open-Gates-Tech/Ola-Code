@@ -1,7 +1,13 @@
 import { z } from "zod"
-import { OpengatesAccount, OpengatesProduct } from "@/shared/proto/cline/account"
+import {
+	OpengatesAccount,
+	OpengatesAgentBudgetBalance,
+	OpengatesAgentBudgetTask,
+	OpengatesProduct,
+} from "@/shared/proto/cline/account"
 import type { OpengatesAuthService } from "./opengates-auth-service"
 import { createOpengatesFetch, OPENGATES_API_BASE_URL } from "./opengates-provider"
+import { getOpengatesAgentTask } from "./opengates-task-budget"
 
 const accountSchema = z.object({
 	tier: z.string(),
@@ -9,6 +15,9 @@ const accountSchema = z.object({
 	credits_remaining: z.number(),
 	fast_remaining: z.number(),
 	reason_remaining: z.number(),
+	allowance_policy_version: z.number().int().nonnegative().optional(),
+	fast_limit: z.number().int().min(-1).max(Number.MAX_SAFE_INTEGER).optional(),
+	reason_limit: z.number().int().min(-1).max(Number.MAX_SAFE_INTEGER).optional(),
 	reset_at: z.string().optional(),
 	expires_at: z.string().optional(),
 })
@@ -21,18 +30,6 @@ const productSchema = z.object({
 })
 const catalogSchema = z.object({ data: z.array(productSchema), billing_enabled: z.boolean().optional() })
 const checkoutSchema = z.object({ checkout_url: z.string().url() })
-
-// Mirrors Allowances() in OlaAI-Server models/account; -1 means unlimited.
-export function opengatesAllowances(tier: string): { fast: number; reason: number } {
-	switch (tier) {
-		case "pro":
-			return { fast: 10_000_000, reason: 1_500_000 }
-		case "internal":
-			return { fast: -1, reason: 5_000_000 }
-		default:
-			return { fast: 500_000, reason: 0 }
-	}
-}
 
 // Go serializes unset time.Time as year 0001.
 function optionalDate(value: string | undefined): string | undefined {
@@ -59,9 +56,10 @@ async function findUpgradeProduct(fetcher: typeof globalThis.fetch) {
 export async function fetchOpengatesAccount(
 	auth: OpengatesAuthService,
 	fetcher: typeof globalThis.fetch = createOpengatesFetch(auth),
+	lastAgentTaskId?: string,
 ): Promise<OpengatesAccount> {
 	const account = await getJson(fetcher, "/account", accountSchema)
-	const allowances = opengatesAllowances(account.tier)
+	const agentTask = lastAgentTaskId ? await getOpengatesAgentTask(lastAgentTaskId, auth, fetcher) : undefined
 	let upgradeProduct: OpengatesProduct | undefined
 	if (account.tier === "free") {
 		// The plan details still render if the catalog is unavailable; only the upgrade offer is hidden.
@@ -81,10 +79,34 @@ export async function fetchOpengatesAccount(
 		creditsRemaining: account.credits_remaining,
 		fastRemaining: account.fast_remaining,
 		reasonRemaining: account.reason_remaining,
-		fastAllowance: allowances.fast,
-		reasonAllowance: allowances.reason,
+		allowancePolicyVersion: account.allowance_policy_version,
+		fastLimit: account.fast_limit,
+		reasonLimit: account.reason_limit,
 		resetAt: optionalDate(account.reset_at),
 		expiresAt: optionalDate(account.expires_at),
+		agentBudgetTask: agentTask
+			? OpengatesAgentBudgetTask.create({
+					mode: agentTask.mode,
+					enforcementEnabled: agentTask.enforcementEnabled,
+					customerConsumption: agentTask.customerConsumption,
+					riskDependencyMissing: agentTask.riskDependencyMissing,
+					id: agentTask.id,
+					policyVersion: agentTask.policyVersion,
+					period: agentTask.period,
+					plan: agentTask.plan,
+					preset: agentTask.preset,
+					capNusd: agentTask.capNusd,
+					shadowUsedNusd: agentTask.shadowUsedNusd,
+					shadowHeldNusd: agentTask.shadowHeldNusd,
+					iterations: agentTask.iterations,
+					maxIterations: agentTask.maxIterations,
+					deadline: optionalDate(agentTask.deadline),
+					reviewRequired: agentTask.reviewRequired,
+					premiumAuthorized: agentTask.premiumAuthorized,
+					standard: agentTask.standard ? OpengatesAgentBudgetBalance.create(agentTask.standard) : undefined,
+					premium: agentTask.premium ? OpengatesAgentBudgetBalance.create(agentTask.premium) : undefined,
+				})
+			: undefined,
 		upgradeProduct,
 	})
 }

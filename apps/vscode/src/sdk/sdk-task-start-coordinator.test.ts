@@ -23,6 +23,65 @@ describe("SdkTaskStartCoordinator", () => {
 		vi.mocked(isDirectory).mockResolvedValue(false)
 	})
 
+	it("creates a server shadow task before generation and keeps its id on the provider correlation", async () => {
+		const { coordinator, options } = makeCoordinator({
+			config: {
+				providerId: "openai-compatible",
+				modelId: "ola-code-fast",
+				apiKey: "session",
+				baseUrl: "https://ola-pilot-api.proudglacier-876118b2.eastus2.azurecontainerapps.io/v1",
+			},
+		})
+		const prepare = vi.fn().mockResolvedValue({
+			kind: "ready",
+			task: {
+				mode: "shadow",
+				enforcementEnabled: false,
+				customerConsumption: false,
+				id: "placeholder",
+				preset: "bugfix",
+				capNusd: 150_000_000,
+				shadowUsedNusd: 0,
+				shadowHeldNusd: 0,
+				iterations: 0,
+				maxIterations: 10,
+				premiumAuthorized: false,
+			},
+		})
+		options.prepareOpengatesTask = prepare
+
+		const taskId = await coordinator.initTask("fix the bug")
+
+		expect(taskId).toEqual(expect.any(String))
+		expect(prepare).toHaveBeenCalledWith(taskId)
+		expect(options.stateManager.setGlobalState).toHaveBeenCalledWith("opengatesAgentBudgetTaskId", taskId)
+		const buildInput = options.sessionConfigBuilder.build.mock.calls[0][0]
+		expect(buildInput.opengatesTaskCorrelation).toMatchObject({ taskId, enabled: true })
+		expect(options.sessions.fireAndForgetSend).toHaveBeenCalledWith(
+			expect.any(Object),
+			taskId,
+			"resolved: fix the bug",
+			undefined,
+			undefined,
+		)
+	})
+
+	it("does not generate when the user cancels shadow preset selection", async () => {
+		const { coordinator, options } = makeCoordinator({
+			config: {
+				providerId: "openai-compatible",
+				modelId: "ola-code-fast",
+				apiKey: "session",
+				baseUrl: "https://ola-pilot-api.proudglacier-876118b2.eastus2.azurecontainerapps.io/v1",
+			},
+		})
+		options.prepareOpengatesTask = vi.fn().mockResolvedValue({ kind: "cancelled" })
+
+		expect(await coordinator.initTask("fix the bug")).toBeUndefined()
+		expect(options.sessions.startNewSession).not.toHaveBeenCalled()
+		expect(options.sessions.fireAndForgetSend).not.toHaveBeenCalled()
+	})
+
 	it("initializes a new task, emits the task message, and sends the resolved prompt", async () => {
 		const { coordinator, options, state } = makeCoordinator()
 
@@ -38,6 +97,7 @@ describe("SdkTaskStartCoordinator", () => {
 			taskSettings: undefined,
 			cwd: "/workspace",
 			mode: "act",
+			opengatesTaskCorrelation: expect.objectContaining({ taskId: expect.any(String), enabled: false }),
 		})
 		expect(options.buildStartSessionInput).toHaveBeenCalledWith(
 			expect.objectContaining({ providerId: "anthropic", modelId: "model", sessionId }),
@@ -189,7 +249,11 @@ describe("SdkTaskStartCoordinator", () => {
 		expect(options.taskHistory.findHistoryItem).toHaveBeenCalledWith("task-1")
 		expect(isDirectory).toHaveBeenCalledWith("/task-cwd")
 		expect(options.getWorkspaceRoot).not.toHaveBeenCalled()
-		expect(options.sessionConfigBuilder.build).toHaveBeenCalledWith({ cwd: "/task-cwd", mode: "act" })
+		expect(options.sessionConfigBuilder.build).toHaveBeenCalledWith({
+			cwd: "/task-cwd",
+			mode: "act",
+			opengatesTaskCorrelation: expect.objectContaining({ taskId: "task-1", enabled: false }),
+		})
 		expect(options.createTempSessionHost).toHaveBeenCalledOnce()
 		expect(options.loadInitialMessages).toHaveBeenCalledWith(tempHost, "task-1")
 		expect(tempHost.dispose).toHaveBeenCalledWith("readMessages")
@@ -222,7 +286,11 @@ describe("SdkTaskStartCoordinator", () => {
 
 		expect(isDirectory).toHaveBeenCalledWith("/missing-task-cwd")
 		expect(options.getWorkspaceRoot).toHaveBeenCalledOnce()
-		expect(options.sessionConfigBuilder.build).toHaveBeenCalledWith({ cwd: "/workspace", mode: "act" })
+		expect(options.sessionConfigBuilder.build).toHaveBeenCalledWith({
+			cwd: "/workspace",
+			mode: "act",
+			opengatesTaskCorrelation: expect.objectContaining({ taskId: "task-1", enabled: false }),
+		})
 	})
 
 	it("emits Cline auth errors when reinitialization fails due auth", async () => {
@@ -262,6 +330,8 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 	const options = {
 		stateManager: {
 			getGlobalSettingsKey: vi.fn(() => input.mode ?? "act"),
+			getGlobalStateKey: vi.fn(),
+			setGlobalState: vi.fn(),
 		} as unknown as StateManager,
 		sessions: {
 			startNewSession: vi.fn((startInput?: { config?: { sessionId?: string } }) => ({
@@ -352,6 +422,7 @@ interface MakeCoordinatorInput {
 		providerId: string
 		modelId: string
 		apiKey: string
+		baseUrl?: string
 	}
 	historyItem: HistoryItem
 	hasHistoryItem: boolean

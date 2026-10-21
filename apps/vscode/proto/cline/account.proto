@@ -79,12 +79,48 @@ message OpengatesAccount {
   int64 credits_remaining = 3;
   int64 fast_remaining = 4;
   int64 reason_remaining = 5;
-  // Period allowance for the tier; -1 means unlimited.
-  int64 fast_allowance = 6;
-  int64 reason_allowance = 7;
+  // Legacy client-guessed allowances. Do not use for usage display.
+  int64 fast_allowance = 6 [deprecated = true];
+  int64 reason_allowance = 7 [deprecated = true];
   optional string reset_at = 8;
   optional string expires_at = 9;
   optional OpengatesProduct upgrade_product = 10;
+  // Current raw-token policy, not the proposed Standard/Premium budgets.
+  optional int32 allowance_policy_version = 11;
+  // Authoritative server limits; absent on older servers, -1 means unlimited.
+  optional int64 fast_limit = 12;
+  optional int64 reason_limit = 13;
+  // Last shadow-only agent task snapshot, for evaluation display only.
+  optional OpengatesAgentBudgetTask agent_budget_task = 14;
+}
+
+message OpengatesAgentBudgetBalance {
+  int64 grant_nusd = 1;
+  int64 used_nusd = 2;
+  int64 held_nusd = 3;
+  int64 available_nusd = 4;
+}
+
+message OpengatesAgentBudgetTask {
+  string mode = 1;
+  bool enforcement_enabled = 2;
+  bool customer_consumption = 3;
+  bool risk_dependency_missing = 4;
+  string id = 5;
+  string policy_version = 6;
+  string period = 7;
+  string plan = 8;
+  string preset = 9;
+  int64 cap_nusd = 10;
+  int64 shadow_used_nusd = 11;
+  int64 shadow_held_nusd = 12;
+  int32 iterations = 13;
+  int32 max_iterations = 14;
+  optional string deadline = 15;
+  bool review_required = 16;
+  bool premium_authorized = 17;
+  optional OpengatesAgentBudgetBalance standard = 18;
+  optional OpengatesAgentBudgetBalance premium = 19;
 }
 
 message AuthStateChangedRequest {

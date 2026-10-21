@@ -2231,8 +2231,113 @@ describe("translateSessionEvent — agent_event content_update", () => {
 			text: `build\n${COMMAND_OUTPUT_STRING}\nfinal output`,
 			partial: false,
 			commandCompleted: true,
+			commandOutcome: "succeeded",
 		})
 		expect(update(state, { chunk: "late output" }, toolName)).toEqual([])
+	})
+
+	it.each([
+		["success", undefined, [{ query: "build", result: "ok", success: true }], "succeeded"],
+		["tool error", "boom", undefined, "failed"],
+		[
+			"non-zero exit",
+			undefined,
+			[{ query: "build", result: "[Command exited with code 2]", error: "exit 2", success: false }],
+			"failed",
+		],
+		[
+			"unobserved completion",
+			undefined,
+			[
+				{
+					query: "build",
+					result: "[Command completion could not be observed; the command may still be running and must not be assumed to have succeeded. The terminal has been left open and will not be closed automatically.]",
+					error: "Command exited with code 1",
+					success: false,
+				},
+			],
+			"unconfirmed",
+		],
+		[
+			"detached",
+			undefined,
+			[
+				{
+					query: "build",
+					result: "The user chose to proceed while the command is starting or still running in their terminal.\nThis is partial output; further output is being redirected to this file, which you can read to check progress: /tmp/x.log\nNo output so far.",
+					success: true,
+				},
+			],
+			"detached",
+		],
+	] as const)("reports a truthful outcome for %s", (_name, error, output, outcome) => {
+		const state = new MessageTranslatorState()
+		start(state, "run_commands", "call-1")
+		const [completed] = translate(state, {
+			type: "content_end",
+			contentType: "tool",
+			toolName: "run_commands",
+			toolCallId: "call-1",
+			output,
+			error,
+		})
+		expect(completed).toMatchObject({ say: "command", commandCompleted: true, commandOutcome: outcome })
+	})
+
+	it("does not report success for a finished command without a result", () => {
+		const state = new MessageTranslatorState()
+		start(state, "run_commands", "call-1")
+		const [completed] = translate(state, {
+			type: "content_end",
+			contentType: "tool",
+			toolName: "run_commands",
+			toolCallId: "call-1",
+		})
+		expect(completed).toMatchObject({ say: "command", commandCompleted: true, commandOutcome: "unconfirmed" })
+	})
+
+	it.each([
+		["structured success", [{ query: "ls", result: "a.txt", success: true }], undefined, "succeeded"],
+		["JSON-string success", JSON.stringify([{ query: "ls", result: "a.txt", success: true }]), undefined, "succeeded"],
+		[
+			"text-block success",
+			[{ type: "text", text: JSON.stringify([{ query: "ls", result: "a.txt", success: true }]) }],
+			undefined,
+			"succeeded",
+		],
+		["structured failure", [{ query: "ls", result: "", error: "exit 2", success: false }], undefined, "failed"],
+		["error result", "Command failed", true, "failed"],
+		["plain text without a success flag", "a.txt", undefined, "unconfirmed"],
+	] as const)("restores a truthful outcome from history for %s", (_name, content, isError, outcome) => {
+		const messages: SdkMessage[] = [
+			{ role: "user", content: '<user_input mode="act">list files</user_input>' } as SdkMessage,
+			{
+				role: "assistant",
+				content: [{ type: "tool_use", id: "c1", name: "run_commands", input: { commands: ["ls"] } }],
+			} as SdkMessage,
+			{
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: "c1", content, ...(isError ? { is_error: true } : {}) }],
+			} as SdkMessage,
+		]
+
+		const command = sdkMessagesToClineMessages(messages).find((m) => m.say === "command")
+		expect(command).toMatchObject({ commandCompleted: true, commandOutcome: outcome })
+	})
+
+	it("restores a command whose result was never persisted as unconfirmed", () => {
+		const messages: SdkMessage[] = [
+			{ role: "user", content: '<user_input mode="act">build</user_input>' } as SdkMessage,
+			{
+				role: "assistant",
+				content: [{ type: "tool_use", id: "c1", name: "run_commands", input: { commands: ["npm run build"] } }],
+			} as SdkMessage,
+		]
+
+		const command = sdkMessagesToClineMessages(messages, undefined, { finalTurnCompleted: false }).find(
+			(m) => m.say === "command",
+		)
+		expect(command).toMatchObject({ commandCompleted: true, commandOutcome: "unconfirmed" })
 	})
 
 	it("uses the active command name when completion omits it", () => {
@@ -2252,6 +2357,7 @@ describe("translateSessionEvent — agent_event content_update", () => {
 				text: `build\n${COMMAND_OUTPUT_STRING}\nfinal output`,
 				partial: false,
 				commandCompleted: true,
+				commandOutcome: "succeeded",
 			},
 		])
 	})
@@ -2321,6 +2427,7 @@ describe("translateSessionEvent — agent_event content_update", () => {
 				text: `build\n${COMMAND_OUTPUT_STRING}\nactive final`,
 				partial: false,
 				commandCompleted: true,
+				commandOutcome: "succeeded",
 			},
 		])
 	})

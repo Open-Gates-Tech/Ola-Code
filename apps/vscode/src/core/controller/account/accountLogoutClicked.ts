@@ -14,6 +14,7 @@ export async function accountLogoutClicked(controller: Controller, _request: Emp
 	const opengates = OpengatesAuthService.get()
 	if (opengates) {
 		await opengates.logout()
+		controller.stateManager.setGlobalState("opengatesAgentBudgetTaskId", undefined)
 		if (controller.task) await controller.cancelTask()
 		return Empty.create({})
 	}

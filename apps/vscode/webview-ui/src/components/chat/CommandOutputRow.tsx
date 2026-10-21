@@ -120,6 +120,7 @@ export const CommandOutputRow = memo(
 		isCommandExecuting = false,
 		isCommandPending = false,
 		isCommandCompleted = false,
+		commandOutcome,
 		isBackgroundExec = false, // vscodeTerminalExecutionMode === "backgroundExec"
 		onCancelCommand,
 		icon,
@@ -132,6 +133,7 @@ export const CommandOutputRow = memo(
 		isCommandExecuting?: boolean
 		isCommandPending?: boolean
 		isCommandCompleted?: boolean
+		commandOutcome?: ClineMessage["commandOutcome"]
 		isBackgroundExec?: boolean
 		onCancelCommand?: () => void
 		icon?: JSX.Element | null
@@ -173,6 +175,9 @@ export const CommandOutputRow = memo(
 
 		const requestsApproval = rawCommand.endsWith(COMMAND_REQ_APP_STRING)
 		const command = requestsApproval ? rawCommand.slice(0, -COMMAND_REQ_APP_STRING.length) : rawCommand
+		// Rows restored from older history carry no recorded outcome; without
+		// observed evidence a finished command is shown as unconfirmed.
+		const completedOutcome = isCommandCompleted ? (commandOutcome ?? "unconfirmed") : undefined
 		const showCancelButton =
 			(isCommandExecuting || isCommandPending) && typeof onCancelCommand === "function" && isBackgroundExec
 
@@ -197,15 +202,22 @@ export const CommandOutputRow = memo(
 								<div
 									className={cn("bg-description rounded-full w-2 h-2 shrink-0", {
 										"bg-success animate-pulse": isCommandExecuting,
-										"bg-editor-warning-foreground": isCommandPending,
+										"bg-editor-warning-foreground": isCommandPending || completedOutcome === "unconfirmed",
+										"bg-error": completedOutcome === "failed",
 									})}
 								/>
 								<span
 									className={cn("text-description font-medium text-base shrink-0", {
 										"text-success": isCommandExecuting,
-										"text-editor-warning-foreground": isCommandPending,
+										"text-editor-warning-foreground": isCommandPending || completedOutcome === "unconfirmed",
+										"text-error": completedOutcome === "failed",
 									})}>
-									{getCommandStatusText(isCommandExecuting, isCommandPending, isCommandCompleted)}
+									{getCommandStatusText(
+										isCommandExecuting,
+										isCommandPending,
+										isCommandCompleted,
+										completedOutcome,
+									)}
 								</span>
 							</div>
 							<div className="flex items-center gap-2 shrink-0">
@@ -239,8 +251,8 @@ export const CommandOutputRow = memo(
 						<CommandOutputContent
 							isContainerExpanded={true}
 							isOutputFullyExpanded={isOutputFullyExpanded}
-							onToggle={() => setIsOutputFullyExpanded(!isOutputFullyExpanded)}
 							onOutputChange={onOutputChange}
+							onToggle={() => setIsOutputFullyExpanded(!isOutputFullyExpanded)}
 							output={output}
 						/>
 					)}
@@ -262,10 +274,18 @@ const CommandStatusMap = {
 	executing: "Running",
 	pending: "Pending",
 	completed: "Completed",
+	failed: "Failed",
+	unconfirmed: "Unconfirmed",
+	detached: "Still running",
 	skipped: "Skipped",
 }
 
-function getCommandStatusText(isExecuting: boolean, isPending: boolean, isCompleted: boolean): string {
+export function getCommandStatusText(
+	isExecuting: boolean,
+	isPending: boolean,
+	isCompleted: boolean,
+	outcome?: ClineMessage["commandOutcome"],
+): string {
 	if (isExecuting) {
 		return CommandStatusMap.executing
 	}
@@ -273,7 +293,10 @@ function getCommandStatusText(isExecuting: boolean, isPending: boolean, isComple
 		return CommandStatusMap.pending
 	}
 	if (isCompleted) {
-		return CommandStatusMap.completed
+		if (outcome === "succeeded") return CommandStatusMap.completed
+		if (outcome === "failed") return CommandStatusMap.failed
+		if (outcome === "detached") return CommandStatusMap.detached
+		return CommandStatusMap.unconfirmed
 	}
 	return CommandStatusMap.skipped
 }

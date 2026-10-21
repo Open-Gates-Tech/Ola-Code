@@ -1,6 +1,6 @@
-import { act, render, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { CommandOutputContent } from "./CommandOutputRow"
+import { CommandOutputContent, CommandOutputRow } from "./CommandOutputRow"
 
 vi.mock("../common/CodeBlock", () => ({
 	default: ({ source }: { source: string }) => <pre>{source}</pre>,
@@ -75,5 +75,31 @@ describe("CommandOutputContent", () => {
 
 		await act(async () => {})
 		expect(onOutputChange).not.toHaveBeenCalled()
+	})
+})
+
+describe("CommandOutputRow status", () => {
+	it.each([
+		// Restored history without a recorded outcome is not evidence of success.
+		[undefined, "Unconfirmed"],
+		["succeeded", "Completed"],
+		["failed", "Failed"],
+		["unconfirmed", "Unconfirmed"],
+		["detached", "Still running"],
+	] as const)("labels a finished command with outcome %s as %s", (outcome, label) => {
+		render(
+			<CommandOutputRow
+				commandOutcome={outcome}
+				isCommandCompleted={true}
+				isOutputFullyExpanded={false}
+				message={{ ts: 1, type: "say", say: "command", text: "ls", commandCompleted: true, commandOutcome: outcome }}
+				setIsOutputFullyExpanded={vi.fn()}
+			/>,
+		)
+
+		expect(screen.getByText(label)).toBeInTheDocument()
+		if (outcome !== "succeeded") {
+			expect(screen.queryByText("Completed")).not.toBeInTheDocument()
+		}
 	})
 })

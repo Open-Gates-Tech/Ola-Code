@@ -215,6 +215,8 @@ export interface ClineMessage {
 	 */
 	epoch?: number
 	commandCompleted?: boolean
+	/** Known outcome of a finished command; absent on legacy messages. */
+	commandOutcome?: "succeeded" | "failed" | "unconfirmed" | "detached"
 	lastCheckpointHash?: string
 	isCheckpointCheckedOut?: boolean
 	isOperationOutsideWorkspace?: boolean

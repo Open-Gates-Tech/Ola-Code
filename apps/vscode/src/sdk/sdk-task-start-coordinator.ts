@@ -8,6 +8,15 @@ import type { Mode } from "@shared/storage/types"
 import type { StateManager } from "@/core/storage/StateManager"
 import { Logger } from "@/shared/services/Logger"
 import { isDirectory } from "@/utils/fs"
+import {
+	createOpengatesTaskCorrelation,
+	formatOpengatesTaskBudget,
+	isOpengatesProviderConfig,
+	type OpengatesTaskCorrelation,
+	type OpengatesTaskPreparation,
+	prepareOpengatesAgentTask,
+	resumeOpengatesAgentTask,
+} from "./opengates-task-budget"
 import { PROVIDER_FAILURE_ERROR_TYPE, PROVIDER_FAILURE_PHASE, type ProviderFailureTelemetry } from "./provider-failure-telemetry"
 import type { SdkMessageCoordinator } from "./sdk-message-coordinator"
 import type { SdkSessionConfigBuilder } from "./sdk-session-config-builder"
@@ -56,6 +65,7 @@ export interface SdkTaskStartCoordinatorOptions {
 	emitClineAuthError: (task?: string) => void
 	captureProviderApiError?: (event: ProviderFailureTelemetry) => void
 	postStateToWebview: () => Promise<void>
+	prepareOpengatesTask?: (taskId: string) => Promise<OpengatesTaskPreparation>
 }
 
 export class SdkTaskStartCoordinator {
@@ -70,6 +80,7 @@ export class SdkTaskStartCoordinator {
 	): Promise<string | undefined> {
 		Logger.log(`[SdkController] initTask called: "${prompt?.substring(0, 50)}"`)
 		let taskSessionId: string | undefined
+		let opengatesTaskCorrelation: OpengatesTaskCorrelation | undefined
 		let providerId: string | undefined
 		let modelId: string | undefined
 		try {
@@ -77,6 +88,9 @@ export class SdkTaskStartCoordinator {
 
 			const cwd = await this.options.getWorkspaceRoot()
 			const mode = this.getCurrentMode()
+			const requestedTaskId = createSessionId()
+			taskSessionId = requestedTaskId
+			opengatesTaskCorrelation = createOpengatesTaskCorrelation(requestedTaskId)
 			Logger.log(`[SdkController] Building session config: mode=${mode}, cwd=${cwd}`)
 			const config = await this.options.sessionConfigBuilder.build({
 				prompt,
@@ -86,6 +100,7 @@ export class SdkTaskStartCoordinator {
 				taskSettings,
 				cwd,
 				mode,
+				opengatesTaskCorrelation,
 			})
 			providerId = config.providerId
 			modelId = config.modelId
@@ -104,10 +119,23 @@ export class SdkTaskStartCoordinator {
 				return undefined
 			}
 
-			taskSessionId = config.sessionId?.trim() || createSessionId()
+			const resolvedTaskId = config.sessionId?.trim() || requestedTaskId
+			taskSessionId = resolvedTaskId
+			opengatesTaskCorrelation.taskId = resolvedTaskId
 			const configWithSessionId = {
 				...config,
-				sessionId: taskSessionId,
+				sessionId: resolvedTaskId,
+			}
+
+			let budgetTask: Awaited<ReturnType<typeof resumeOpengatesAgentTask>> | undefined
+			if (isOpengatesProviderConfig(config.providerId, config.baseUrl)) {
+				const preparation = await (this.options.prepareOpengatesTask ?? prepareOpengatesAgentTask)(resolvedTaskId)
+				if (preparation.kind === "cancelled") return undefined
+				if (preparation.kind === "ready") {
+					opengatesTaskCorrelation.enabled = true
+					budgetTask = preparation.task
+					this.options.stateManager.setGlobalState("opengatesAgentBudgetTaskId", resolvedTaskId)
+				}
 			}
 
 			const startInput = this.options.buildStartSessionInput(configWithSessionId, {
@@ -120,8 +148,19 @@ export class SdkTaskStartCoordinator {
 				mode,
 			})
 
-			const task = this.createAndSetTask(taskSessionId)
-			this.emitInitialTaskMessage(taskSessionId, prompt ?? "", images, files)
+			const task = this.createAndSetTask(resolvedTaskId)
+			this.emitInitialTaskMessage(resolvedTaskId, prompt ?? "", images, files)
+			if (budgetTask) {
+				task.messageStateHandler.addMessages([
+					{
+						ts: Date.now(),
+						type: "say",
+						say: "text",
+						text: formatOpengatesTaskBudget(budgetTask),
+						partial: false,
+					},
+				])
+			}
 
 			// The turn phase was already set to "streaming" (in SdkController.initTask), but the
 			// webview only learns the phase through a full state post. Ship one now, in parallel
@@ -132,16 +171,16 @@ export class SdkTaskStartCoordinator {
 			})
 
 			const { startResult, sdkHost } = await this.options.sessions.startNewSession(startInput)
-			if (startResult.sessionId !== taskSessionId) {
+			if (startResult.sessionId !== resolvedTaskId) {
 				Logger.warn(
-					`[SdkController] SDK returned session id ${startResult.sessionId} after requested id ${taskSessionId}`,
+					`[SdkController] SDK returned session id ${startResult.sessionId} after requested id ${resolvedTaskId}`,
 				)
 				task.taskId = startResult.sessionId
 				taskSessionId = startResult.sessionId
 			}
 
 			const newHistoryItem = this.options.createHistoryItemFromSession(
-				taskSessionId,
+				taskSessionId ?? resolvedTaskId,
 				prompt ?? "",
 				configWithSessionId.modelId,
 				cwd,
@@ -150,13 +189,13 @@ export class SdkTaskStartCoordinator {
 			await this.options.postStateToWebview()
 
 			if (prompt?.trim() || images?.length || files?.length) {
-				Logger.log(`[SdkController] Sending prompt to session: ${taskSessionId}`)
+				Logger.log(`[SdkController] Sending prompt to session: ${taskSessionId ?? resolvedTaskId}`)
 				const resolvedTask = await this.options.resolveContextMentions(prompt || "")
-				this.options.sessions.fireAndForgetSend(sdkHost, taskSessionId, resolvedTask, images, files)
+				this.options.sessions.fireAndForgetSend(sdkHost, taskSessionId ?? resolvedTaskId, resolvedTask, images, files)
 			}
 
-			Logger.log(`[SdkController] Task initialized: ${taskSessionId}`)
-			return taskSessionId
+			Logger.log(`[SdkController] Task initialized: ${taskSessionId ?? resolvedTaskId}`)
+			return taskSessionId ?? resolvedTaskId
 		} catch (error) {
 			this.options.captureProviderApiError?.({
 				sessionId: taskSessionId,
@@ -190,10 +229,20 @@ export class SdkTaskStartCoordinator {
 			// workspace root instead.
 			const storedCwd = historyItem.cwdOnTaskInitialization
 			const cwd = storedCwd && (await isDirectory(storedCwd)) ? storedCwd : await this.options.getWorkspaceRoot()
+			const opengatesTaskCorrelation = createOpengatesTaskCorrelation(taskId)
 			const config = await this.options.sessionConfigBuilder.build({
 				cwd,
 				mode: "act",
+				opengatesTaskCorrelation,
 			})
+			let budgetTask: Awaited<ReturnType<typeof resumeOpengatesAgentTask>> | undefined
+			if (
+				isOpengatesProviderConfig(config.providerId, config.baseUrl) &&
+				this.options.stateManager.getGlobalStateKey("opengatesAgentBudgetTaskId") === taskId
+			) {
+				budgetTask = await resumeOpengatesAgentTask(taskId)
+				opengatesTaskCorrelation.enabled = budgetTask?.mode === "shadow"
+			}
 
 			const tempManager = await this.options.createTempSessionHost()
 			const initialMessages = await this.options.loadInitialMessages(tempManager, taskId)
@@ -206,7 +255,18 @@ export class SdkTaskStartCoordinator {
 				sessionMetadata: historyItemToSessionMetadata(historyItem, config.modelId),
 			})
 
-			this.createAndSetTask(startResult.sessionId)
+			const resumedTask = this.createAndSetTask(startResult.sessionId)
+			if (budgetTask) {
+				resumedTask.messageStateHandler.addMessages([
+					{
+						ts: Date.now(),
+						type: "say",
+						say: "text",
+						text: formatOpengatesTaskBudget(budgetTask),
+						partial: false,
+					},
+				])
+			}
 			await this.options.postStateToWebview()
 
 			Logger.log(`[SdkController] Task resumed: ${taskId} → ${startResult.sessionId}`)

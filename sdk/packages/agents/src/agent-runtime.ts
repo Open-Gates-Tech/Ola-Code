@@ -75,6 +75,31 @@ const MAX_TOKENS_RECOVERY_NUDGE =
 	"Your previous response was cut off because it reached the model's output-token limit before finishing. Keep responses concise: take one small step at a time, avoid long explanations, and write large files or command output in smaller chunks across multiple tool calls.";
 
 /**
+ * How many consecutive turns may leak raw chat-template tool-call markup
+ * (e.g. DeepSeek `<?DSML?tool_calls>` blocks) into text-only assistant turns
+ * before the run fails. Leaked markup is never executed or parsed into a tool
+ * call; each offending turn gets one corrective continuation. The counter resets on any turn without leaked markup, so this
+ * bounds only a run of consecutive protocol violations.
+ */
+const PROTOCOL_MARKUP_RECOVERY_LIMIT = 2;
+const PROTOCOL_MARKUP_TEXT_NUDGE =
+	"Your previous response contained raw tool-call markup in its text instead of a structured tool call, so nothing was executed. Use the structured tool-calling interface to call tools, and never write tool-call markup in your response text.";
+const PROTOCOL_MARKUP_FAILURE_MESSAGE =
+	"Model repeatedly emitted raw tool-call markup instead of structured tool calls; stopping to avoid executing malformed commands";
+
+/**
+ * Chat-template tool-call control tokens that signal a lost tool call when
+ * they appear in a text-only assistant turn. Only assistant text is checked;
+ * structured tool arguments may legitimately contain these literals.
+ * Matches DeepSeek DSML (`<?DSML?...`) and DeepSeek V3 tool tokens
+ * (`<?tool?calls?begin?>`, `<?tool?call?begin?>`, `<?tool?sep?>`, ...).
+ * Uses the fullwidth vertical bar (U+FF5C) these templates use, so ordinary
+ * shell pipes and ASCII `<|...|>` text are not affected.
+ */
+const LEAKED_TOOL_CALL_MARKUP_PATTERN =
+	/<\uFF5C\s*(?:DSML\s*\uFF5C|\/?\s*tool[\u2581_ ]?(?:calls?|outputs?)[\u2581_ ]?(?:begin|end)|tool[\u2581_ ]?sep)/i;
+
+/**
  * How many times to retry a model turn that failed with a transient,
  * provider-side error (rate limits, 5xx, network hiccups, OpenRouter's
  * generic "Provider returned error"). The initial attempt is not counted, so
@@ -594,6 +619,7 @@ export class AgentRuntime {
 	private overflowRecoveryAttempted = false;
 	/** Consecutive output-limit cut-offs recovered this run; see MAX_TOKENS_RECOVERY_LIMIT. */
 	private maxTokensRecoveryCount = 0;
+	private protocolMarkupViolationCount = 0;
 	/** One automatic recovery attempt per run for max-tokens-truncated turns. */
 	private maxTokensRecoveryAttempted = false;
 	private initialization?: Promise<void>;
@@ -808,6 +834,7 @@ export class AgentRuntime {
 		this.pendingHookContexts = [];
 		this.maxTokensRecoveryCount = 0;
 		this.maxTokensRecoveryAttempted = false;
+		this.protocolMarkupViolationCount = 0;
 
 		try {
 			await this.callBeforeRunHooks();
@@ -944,6 +971,30 @@ export class AgentRuntime {
 				if (toolCalls.length > 0) {
 					this.maxTokensRecoveryCount = 0;
 				}
+
+				// Chat-template tool-call markup in a text-only turn means the
+				// intended call never reached the structured interface. It is
+				// never parsed or executed; the model gets a bounded corrective
+				// reminder. Structured tool arguments are validated only as
+				// JSON/schema, so literal markup inside them stays legitimate.
+				const leakedMarkupInText =
+					toolCalls.length === 0 &&
+					containsLeakedToolCallMarkup(textFromMessage(message));
+				if (leakedMarkupInText) {
+					this.protocolMarkupViolationCount += 1;
+				} else {
+					this.protocolMarkupViolationCount = 0;
+				}
+				if (leakedMarkupInText) {
+					await this.recoverFromLeakedToolCallMarkup();
+					await this.emit({
+						type: "turn-finished",
+						snapshot: this.snapshot(),
+						iteration: this.state.iteration,
+						toolCallCount: 0,
+					});
+					continue;
+				}
 				this.state.pendingToolCalls = toolCalls.map((part) => part.toolCallId);
 
 				if (toolCalls.length === 0) {
@@ -994,7 +1045,6 @@ export class AgentRuntime {
 						"Model ended without a recognized finish reason or successful tool work",
 					);
 				}
-
 				await this.flushPendingHookContexts();
 				await this.emit({
 					type: "turn-finished",
@@ -1152,6 +1202,32 @@ export class AgentRuntime {
 		for (const hook of this.hooks.afterRun) {
 			await hook({ snapshot: this.snapshot(), result });
 		}
+	}
+
+	/**
+	 * Continue after a text-only turn that leaked raw tool-call markup: the
+	 * markup is kept as-is in the transcript but never executed, and the model
+	 * is told to use structured tool calls. Throws once more than
+	 * PROTOCOL_MARKUP_RECOVERY_LIMIT consecutive turns leaked markup.
+	 */
+	private async recoverFromLeakedToolCallMarkup(): Promise<void> {
+		if (this.protocolMarkupViolationCount > PROTOCOL_MARKUP_RECOVERY_LIMIT) {
+			throw new Error(PROTOCOL_MARKUP_FAILURE_MESSAGE);
+		}
+		await this.emit({
+			type: "status-notice",
+			snapshot: this.snapshot(),
+			message: `model wrote raw tool-call markup instead of a structured tool call ? nothing was executed; asking it to retry (attempt ${this.protocolMarkupViolationCount}/${PROTOCOL_MARKUP_RECOVERY_LIMIT})`,
+			metadata: {
+				kind: "protocol_markup_recovery",
+				reason: "protocol_markup_recovery",
+				phase: "started",
+				iteration: this.state.iteration,
+				attempt: this.protocolMarkupViolationCount,
+				maxRetries: PROTOCOL_MARKUP_RECOVERY_LIMIT,
+			},
+		});
+		await this.addUserReminderMessage(PROTOCOL_MARKUP_TEXT_NUDGE);
 	}
 
 	/**
@@ -2818,10 +2894,10 @@ function parseToolInput(assembly: PendingToolAssembly): {
 	reason?: InvalidToolCall["reason"];
 } {
 	if (assembly.inputValue !== undefined) {
-		return {
-			input: assembly.inputValue,
-			invalidInput: buildInvalidToolInput(JSON.stringify(assembly.inputValue)),
-		};
+		const invalidInput = buildInvalidToolInput(
+			JSON.stringify(assembly.inputValue),
+		);
+		return { input: assembly.inputValue, invalidInput };
 	}
 	if (!assembly.inputText.trim()) {
 		return {
@@ -2831,10 +2907,8 @@ function parseToolInput(assembly: PendingToolAssembly): {
 	}
 	const parsed = parseToolArguments(assembly.inputText);
 	if (parsed.ok) {
-		return {
-			input: parsed.value,
-			invalidInput: buildInvalidToolInput(assembly.inputText),
-		};
+		const invalidInput = buildInvalidToolInput(assembly.inputText);
+		return { input: parsed.value, invalidInput };
 	}
 	return {
 		input: {},
@@ -2888,15 +2962,49 @@ function parseToolArguments(
 	};
 }
 
+/**
+ * Merge a streamed tool-argument chunk into the text assembled so far.
+ * Providers send either incremental deltas or cumulative snapshots of the
+ * full argument text (sometimes repeating the final snapshot). The shape of
+ * the data decides, never the provider id:
+ * - incoming extends current ? cumulative snapshot, replace;
+ * - current already contains incoming as a prefix ? stale/repeated snapshot;
+ * - current is complete JSON and incoming is complete JSON ? corrected full
+ *   snapshot, replace;
+ * - otherwise ? incremental delta, append (even when the chunk starts with
+ *   `{` or `[`, which happens when a chunk boundary precedes a nested value).
+ */
 function mergeToolInputText(current: string, incoming: string): string {
 	if (!current) {
 		return incoming;
 	}
-	const trimmed = incoming.trimStart();
-	if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+	if (incoming.startsWith(current)) {
+		return incoming;
+	}
+	if (current.startsWith(incoming)) {
+		return current;
+	}
+	if (isCompleteJson(current) && isCompleteJson(incoming)) {
 		return incoming;
 	}
 	return current + incoming;
+}
+
+function isCompleteJson(value: string): boolean {
+	const trimmed = value.trim();
+	if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
+		return false;
+	}
+	try {
+		JSON.parse(trimmed);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function containsLeakedToolCallMarkup(value: string): boolean {
+	return LEAKED_TOOL_CALL_MARKUP_PATTERN.test(value);
 }
 
 export function createAgentRuntime(config: AgentRuntimeConfig): AgentRuntime {

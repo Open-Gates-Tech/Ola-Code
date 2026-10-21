@@ -52,6 +52,7 @@ import {
 	isClineFreePromotionEndedMessage,
 	MODEL_NOT_FOUND_GUIDANCE,
 } from "../services/error/ClineError"
+import { classifyCommandOutcome } from "./command-outcome"
 import { MessageIdMinter } from "./message-id-minter"
 import { describeCredentialRejectedError, describeMissingCredentialError } from "./provider-credential-error"
 import { extractPersistedHookContextChips, isSyntheticSdkUserMessage, isSyntheticUserPrompt } from "./sdk-user-message-mapping"
@@ -1759,6 +1760,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 							text: outputStr ? `${commandText}\n${COMMAND_OUTPUT_STRING}\n${outputStr}` : commandText,
 							partial: false,
 							commandCompleted: true,
+							commandOutcome: classifyCommandOutcome(event.error, event.output),
 						})
 						break
 					}

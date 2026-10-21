@@ -22,6 +22,10 @@ export function formatPrice(amount: number, currency: string): string {
 	}
 }
 
+function formatModelEquivalent(nusd: number | undefined): string {
+	return nusd === undefined ? "Unavailable" : `$${(nusd / 1_000_000_000).toFixed(3)} model-cost equivalent`
+}
+
 function formatDate(iso: string | undefined): string | undefined {
 	return iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : undefined
 }
@@ -32,13 +36,26 @@ function initials(user: ClineUser): string {
 	return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts.at(-1)?.[0] ?? "") : "")).toUpperCase() || "?"
 }
 
-function UsageMeter({ label, remaining, allowance }: { label: string; remaining: number; allowance: number }) {
+function UsageMeter({ label, remaining, allowance }: { label: string; remaining: number; allowance: number | undefined }) {
+	if (allowance === undefined) {
+		return (
+			<div className="ola-usage-meter">
+				<div className="flex items-center justify-between text-xs">
+					<span>{label}</span>
+					<span className="text-description">Total unavailable</span>
+				</div>
+				<div className="text-[11px] text-description">
+					{remaining >= 0 ? `${compact.format(remaining)} reported tokens remaining` : "Remaining unavailable"}
+				</div>
+			</div>
+		)
+	}
 	if (allowance === 0) {
 		return (
 			<div className="ola-usage-meter" data-locked="true">
 				<div className="flex items-center justify-between text-xs">
 					<span>{label}</span>
-					<span className="text-description">Pro only</span>
+					<span className="text-description">Not included</span>
 				</div>
 			</div>
 		)
@@ -53,8 +70,7 @@ function UsageMeter({ label, remaining, allowance }: { label: string; remaining:
 			</div>
 		)
 	}
-	const left = Math.max(0, Math.min(remaining, allowance))
-	const percent = Math.round((left / allowance) * 100)
+	const percent = Math.round(Math.max(0, Math.min(remaining / allowance, 1)) * 100)
 	return (
 		<div className="ola-usage-meter">
 			<div className="flex items-center justify-between text-xs">
@@ -71,7 +87,7 @@ function UsageMeter({ label, remaining, allowance }: { label: string; remaining:
 				<div className="ola-usage-fill" data-low={percent <= 15 || undefined} style={{ width: `${percent}%` }} />
 			</div>
 			<div className="text-[11px] text-description">
-				{compact.format(left)} of {compact.format(allowance)} tokens
+				{compact.format(remaining)} of {compact.format(allowance)} tokens remaining
 			</div>
 		</div>
 	)
@@ -184,12 +200,11 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 					</p>
 				) : account ? (
 					<>
-						<UsageMeter allowance={account.fastAllowance} label="Fast" remaining={account.fastRemaining} />
-						<UsageMeter
-							allowance={account.reasonAllowance}
-							label="Thinking & Pro"
-							remaining={account.reasonRemaining}
-						/>
+						<UsageMeter allowance={account.fastLimit} label="Fast" remaining={account.fastRemaining} />
+						<UsageMeter allowance={account.reasonLimit} label="Thinking & Pro" remaining={account.reasonRemaining} />
+						<p className="m-0 text-[11px] text-description">
+							Server-reported raw-token balances, not Standard/Premium budgets.
+						</p>
 						<dl className="ola-account-facts">
 							<div>
 								<dt>Credits</dt>
@@ -205,6 +220,69 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 					</>
 				) : null}
 			</section>
+
+			{account?.agentBudgetTask?.mode === "shadow" && (
+				<section className="ola-account-card flex flex-col gap-3" data-testid="opengates-agent-budget">
+					<div>
+						<h3 className="ola-account-heading">Shadow evaluation</h3>
+						<p className="m-0 mt-1 text-[11px] text-description">
+							Evaluation only — shadow grants are not active budgets. These figures are non-enforcing and do not
+							consume customer usage.
+						</p>
+					</div>
+					<dl className="ola-account-facts">
+						<div>
+							<dt>Task</dt>
+							<dd>
+								{account.agentBudgetTask.preset || "Evaluation"} · {account.agentBudgetTask.id}
+							</dd>
+						</div>
+						<div>
+							<dt>Task cap</dt>
+							<dd>{formatModelEquivalent(account.agentBudgetTask.capNusd)}</dd>
+						</div>
+						<div>
+							<dt>Shadow usage / held</dt>
+							<dd>
+								{formatModelEquivalent(account.agentBudgetTask.shadowUsedNusd)} /{" "}
+								{formatModelEquivalent(account.agentBudgetTask.shadowHeldNusd)}
+							</dd>
+						</div>
+						<div>
+							<dt>Iterations</dt>
+							<dd>
+								{account.agentBudgetTask.iterations ?? "Unavailable"} /{" "}
+								{account.agentBudgetTask.maxIterations ?? "Unavailable"}
+							</dd>
+						</div>
+						<div>
+							<dt>Premium evaluation consent</dt>
+							<dd>{account.agentBudgetTask.premiumAuthorized ? "Granted for this task" : "Not granted"}</dd>
+						</div>
+					</dl>
+					{(["standard", "premium"] as const).map((pool) => {
+						const balance = account.agentBudgetTask?.[pool]
+						return (
+							<div className="ola-usage-meter" key={pool}>
+								<div className="flex items-center justify-between text-xs">
+									<span>{pool === "standard" ? "Standard" : "Premium"} shadow evaluation grant</span>
+									<span className="text-description">Server-reported</span>
+								</div>
+								<div className="text-[11px] text-description">
+									{balance
+										? `${formatModelEquivalent(balance.grantNusd)} grant; ${formatModelEquivalent(balance.availableNusd)} remaining; ${formatModelEquivalent(balance.heldNusd)} held`
+										: "Grant, remaining, and held totals unavailable from the server"}
+								</div>
+							</div>
+						)
+					})}
+					{account.agentBudgetTask.riskDependencyMissing && (
+						<p className="m-0 text-[11px] text-description">
+							Provider-risk dependency is missing; no independent provider-risk cap is enforced.
+						</p>
+					)}
+				</section>
+			)}
 
 			{account && (
 				<section className="ola-account-card flex flex-col gap-2">

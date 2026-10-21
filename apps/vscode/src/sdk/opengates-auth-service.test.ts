@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { resolveOpengatesModel } from "@/shared/opengates-models"
 import { OPENGATES_SESSION_KEY, OpengatesAuthService } from "./opengates-auth-service"
 import { createOpengatesFetch, getOpengatesProviderConfig, OPENGATES_API_BASE_URL } from "./opengates-provider"
+import { createOpengatesTaskCorrelation } from "./opengates-task-budget"
 
 vi.mock("@/shared/net", () => ({ fetch: vi.fn() }))
 
@@ -275,11 +276,44 @@ describe("Opengates gateway requests", () => {
 			headers: { "Content-Type": "application/json", Authorization: "Bearer stale" },
 			body: JSON.stringify({ model: "ola-code-fast", messages: [] }),
 		})
+
 		const request = baseFetch.mock.calls[0][0] as Request
 		expect(request.headers.get("authorization")).toBe("Bearer test-access")
 		expect(request.headers.get("content-type")).toBe("application/json")
 		expect(request.redirect).toBe("error")
 		expect(await request.json()).toEqual({ model: "ola-code-fast", messages: [] })
+	})
+
+	it("correlates only shadow-enabled generation requests to the stable task id", async () => {
+		const { auth } = await signedIn()
+		const correlation = createOpengatesTaskCorrelation("task-stable-1")
+		const baseFetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(json({ choices: [] }))
+		const wrappedFetch = createOpengatesFetch(auth, baseFetch, correlation)
+
+		await wrappedFetch(`${OPENGATES_API_BASE_URL}/chat/completions`, { method: "POST" })
+		expect((baseFetch.mock.calls[0][0] as Request).headers.get("X-Ola-Agent-Task-Id")).toBeNull()
+
+		correlation.enabled = true
+		await wrappedFetch(`${OPENGATES_API_BASE_URL}/chat/completions`, { method: "POST" })
+		expect((baseFetch.mock.calls[1][0] as Request).headers.get("X-Ola-Agent-Task-Id")).toBe("task-stable-1")
+
+		await wrappedFetch(`${OPENGATES_API_BASE_URL}/models`, { method: "GET" })
+		expect((baseFetch.mock.calls[2][0] as Request).headers.get("X-Ola-Agent-Task-Id")).toBeNull()
+	})
+
+	it("preserves unrecognized final shadow metadata in the gateway response body", async () => {
+		const { auth } = await signedIn()
+		const payload = 'data: {"choices":[],"ola_shadow":{"enforced":false,"calls":1}}\n\n'
+		const baseFetch = vi
+			.fn<typeof globalThis.fetch>()
+			.mockResolvedValue(new Response(payload, { headers: { "Content-Type": "text/event-stream" } }))
+
+		const response = await createOpengatesFetch(auth, baseFetch)(`${OPENGATES_API_BASE_URL}/chat/completions`, {
+			method: "POST",
+			body: JSON.stringify({ model: "ola-code-fast" }),
+		})
+
+		expect(await response.text()).toBe(payload)
 	})
 
 	it("refreshes and retries exactly once on a 401", async () => {

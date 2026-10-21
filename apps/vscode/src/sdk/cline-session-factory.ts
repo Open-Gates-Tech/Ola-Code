@@ -53,6 +53,7 @@ import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
 import { createProviderConfigStore, resolveRuntimeModelSelection } from "./model-catalog/store"
 import { OpengatesAuthService } from "./opengates-auth-service"
 import { getOpengatesProviderConfig } from "./opengates-provider"
+import type { OpengatesTaskCorrelation } from "./opengates-task-budget"
 import { getProviderSettingsManager } from "./provider-migration"
 import { buildSapProviderConfig, type SapProviderConfig } from "./sap-config"
 import type { SdkSessionHost } from "./session-host"
@@ -79,6 +80,8 @@ export interface SessionConfigInput {
 	workspaceRoot?: string
 	/** Current mode (act/plan) */
 	mode?: Mode
+	/** Task identity and correlation state for shadow-only OpenGates requests. */
+	opengatesTaskCorrelation?: OpengatesTaskCorrelation
 	/** Runtime identity when execution happens outside the extension host. */
 	runtime?: {
 		modelSelection: { providerId: string; modelId: string }
@@ -1036,7 +1039,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		}
 	}
 
-	const opengates = getOpengatesProviderConfig(apiConfig, mode)
+	const opengates = getOpengatesProviderConfig(apiConfig, mode, input.opengatesTaskCorrelation)
 	if (opengates) {
 		providerId = opengates.providerId
 		modelId = opengates.modelId

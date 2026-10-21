@@ -4,11 +4,11 @@ import { fetchOpengatesAccount } from "@/sdk/opengates-account"
 import { OpengatesAuthService } from "@/sdk/opengates-auth-service"
 import type { Controller } from "../index"
 
-export async function getOpengatesAccount(_controller: Controller, _request: EmptyRequest): Promise<OpengatesAccount> {
+export async function getOpengatesAccount(controller: Controller, _request: EmptyRequest): Promise<OpengatesAccount> {
 	const opengates = OpengatesAuthService.get()
 	if (!opengates) {
 		throw new Error("Opengates sign-in is not enabled.")
 	}
 	await opengates.requireAuthentication()
-	return fetchOpengatesAccount(opengates)
+	return fetchOpengatesAccount(opengates, undefined, controller.stateManager.getGlobalStateKey("opengatesAgentBudgetTaskId"))
 }

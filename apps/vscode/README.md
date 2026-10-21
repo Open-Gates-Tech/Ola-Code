@@ -49,6 +49,28 @@ Pro is displayed as unavailable until a gateway model is supplied. Changing the
 model persists the selection for both modes and applies through the SDK provider
 configuration, including auxiliary requests.
 
+The account usage view keeps the current **Fast** and **Thinking & Pro** raw-token
+labels. It reads `allowance_policy_version`, `fast_limit`, and `reason_limit`
+from `GET /v1/account`; limits are authoritative integers (`-1` means unlimited,
+`0` means no allowance). Older servers may omit these additive fields: the view
+then shows reported remaining tokens with an unavailable total, without guessing
+from the plan tier or showing a percentage. These balances are separate from the
+Standard/Premium evaluation budgets.
+
+For an authenticated OpenGates task, the extension reads `GET /v1/usage` before
+generation. Only when the response explicitly reports
+`agent_budget_policy.mode = shadow` does it offer visible bugfix, feature, and
+research presets and create `/v1/agent-tasks` metadata. The user may separately
+grant or decline Premium evaluation consent for that task; consent does not
+change the selected model or enable an active grant. Generation requests then
+carry `X-Ola-Agent-Task-Id` for correlation. The account view can refresh the
+latest task snapshot from `GET /v1/agent-tasks/:id`, clearly labeled evaluation
+only and non-enforcing. Server-reported Standard/Premium remaining and held
+balances are shown when the task response provides them; otherwise the UI says
+they are unavailable. A missing/off policy leaves task creation and consent
+endpoints untouched. None of these evaluation values retires or replaces the
+existing raw-token allowances.
+
 OAuth uses a public client, authorization code flow, and PKCE (S256):
 
 | Setting | Value |

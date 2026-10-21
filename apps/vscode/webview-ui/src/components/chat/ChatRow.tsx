@@ -750,6 +750,7 @@ export const ChatRowContent = memo(
 		if (message.ask === "command" || message.say === "command") {
 			return (
 				<CommandOutputRow
+					commandOutcome={message.commandOutcome}
 					icon={icon}
 					isBackgroundExec={vscodeTerminalExecutionMode === "backgroundExec"}
 					isCommandCompleted={isCommandCompleted}

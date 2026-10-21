@@ -35,6 +35,7 @@ import {
 import { Logger } from "@/shared/services/Logger"
 import { getShellForProfile } from "@/utils/shell"
 import { describeBackgroundFailure } from "./background-failure"
+import { COMMAND_COMPLETION_UNOBSERVED_PREFIX, COMMAND_DETACHED_OUTPUT_MARKER } from "./command-outcome"
 import type { SdkForegroundCommandCoordinator } from "./sdk-foreground-command-coordinator"
 import { isStandaloneHost } from "./vscode-terminal-execution-mode"
 
@@ -211,7 +212,7 @@ function formatDetachedResult(logFilePath: string, output: string, reason: Detac
 		reason === "user"
 			? "The user chose to proceed while the command is starting or still running in their terminal."
 			: `The command was still starting or running after ${FOREGROUND_COMMAND_AUTO_PROCEED_MS / 1000} seconds, so Cline automatically proceeded while leaving it running in the terminal.`,
-		`This is partial output; further output is being redirected to this file, which you can read to check progress: ${logFilePath}`,
+		`${COMMAND_DETACHED_OUTPUT_MARKER} ${logFilePath}`,
 		output.length > 0 ? `Output so far:\n${output}` : "No output so far.",
 	].join("\n")
 }
@@ -459,8 +460,8 @@ export async function executeForeground(
 						: "The terminal has been left open and will not be closed automatically."
 				const result =
 					output.length > 0
-						? `[Command completion could not be observed; the command may still be running and must not be assumed to have succeeded. ${lifecycle}]\n${output}`
-						: `[Command completion could not be observed; the command may still be running and must not be assumed to have succeeded. ${lifecycle}]`
+						? `${COMMAND_COMPLETION_UNOBSERVED_PREFIX} the command may still be running and must not be assumed to have succeeded. ${lifecycle}]\n${output}`
+						: `${COMMAND_COMPLETION_UNOBSERVED_PREFIX} the command may still be running and must not be assumed to have succeeded. ${lifecycle}]`
 				throw new CommandExitError(1, result)
 			}
 

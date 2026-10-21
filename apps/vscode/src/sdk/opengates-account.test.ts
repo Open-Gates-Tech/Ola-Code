@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { OpengatesAccount } from "@/shared/proto/cline/account"
 import { createOpengatesUpgradeCheckout, fetchOpengatesAccount } from "./opengates-account"
 import type { OpengatesAuthService } from "./opengates-auth-service"
 
@@ -30,6 +31,9 @@ describe("Opengates account", () => {
 					credits_remaining: 1200,
 					fast_remaining: 250000,
 					reason_remaining: 0,
+					allowance_policy_version: 1,
+					fast_limit: 750000,
+					reason_limit: 0,
 					reset_at: "2026-11-01T00:00:00Z",
 					expires_at: "0001-01-01T00:00:00Z",
 				}),
@@ -39,8 +43,9 @@ describe("Opengates account", () => {
 		expect(account).toMatchObject({
 			tier: "free",
 			fastRemaining: 250000,
-			fastAllowance: 500000,
-			reasonAllowance: 0,
+			allowancePolicyVersion: 1,
+			fastLimit: 750000,
+			reasonLimit: 0,
 			resetAt: "2026-11-01T00:00:00.000Z",
 			expiresAt: undefined,
 			upgradeProduct: { id: "pro-monthly", currency: "KES", amount: 65000, days: 30 },
@@ -68,8 +73,110 @@ describe("Opengates account", () => {
 				"/billing/products": products,
 			}),
 		)
-		expect(pro).toMatchObject({ fastAllowance: 10_000_000, reasonAllowance: 1_500_000 })
+		expect(pro.fastLimit).toBeUndefined()
+		expect(pro.reasonLimit).toBeUndefined()
+		expect(pro.allowancePolicyVersion).toBeUndefined()
 		expect(products).not.toHaveBeenCalled()
+	})
+
+	it.each(["free", "pro", "ultra", "internal", "custom"])("does not guess missing limits for %s", async (tier) => {
+		const account = await fetchOpengatesAccount(
+			auth,
+			fakeFetch({
+				"/account": () =>
+					json({ tier, status: "active", credits_remaining: 100, fast_remaining: 123, reason_remaining: 45 }),
+			}),
+		)
+		const decoded = OpengatesAccount.decode(OpengatesAccount.encode(account).finish())
+		const fromJson = OpengatesAccount.fromJSON(OpengatesAccount.toJSON(account))
+		for (const result of [account, decoded, fromJson]) {
+			expect(result.fastLimit).toBeUndefined()
+			expect(result.reasonLimit).toBeUndefined()
+			expect(result.allowancePolicyVersion).toBeUndefined()
+			expect(result).toMatchObject({ fastRemaining: 123, reasonRemaining: 45 })
+		}
+	})
+
+	it.each([
+		{ fast_limit: -1, reason_limit: 0 },
+		{ fast_limit: 9_000_000_000, reason_limit: 123456 },
+		{ fast_limit: 0, reason_limit: undefined },
+	])("preserves server limits and optional presence through protobuf: %j", async (limits) => {
+		const account = await fetchOpengatesAccount(
+			auth,
+			fakeFetch({
+				"/account": () =>
+					json({
+						tier: "custom",
+						status: "active",
+						credits_remaining: 0,
+						fast_remaining: 123,
+						reason_remaining: 45,
+						allowance_policy_version: 2,
+						...limits,
+					}),
+			}),
+		)
+		const decoded = OpengatesAccount.decode(OpengatesAccount.encode(account).finish())
+		const fromJson = OpengatesAccount.fromJSON(OpengatesAccount.toJSON(account))
+		for (const result of [account, decoded, fromJson]) {
+			expect(result.fastLimit).toBe(limits.fast_limit)
+			expect(result.reasonLimit).toBe(limits.reason_limit)
+			expect(result.allowancePolicyVersion).toBe(2)
+		}
+	})
+
+	it("loads the last task's server-authoritative shadow evaluation snapshot", async () => {
+		const fetcher = fakeFetch({
+			"/account": () =>
+				json({ tier: "pro", status: "active", credits_remaining: 0, fast_remaining: 10, reason_remaining: 5 }),
+			"/agent-tasks/task-1": () =>
+				json({
+					mode: "shadow",
+					enforcement_enabled: false,
+					customer_consumption: false,
+					risk_dependency_missing: true,
+					task: {
+						id: "task-1",
+						policy_version: "agent-budget-policy-v1",
+						preset: "feature",
+						cap_nusd: 450_000_000,
+						shadow_used_nusd: 25_000_000,
+						shadow_held_nusd: 5_000_000,
+						iterations: 2,
+						max_iterations: 10,
+						premium_authorized: false,
+						standard: {
+							grant_nusd: 2_500_000_000,
+							used_nusd: 50_000_000,
+							held_nusd: 5_000_000,
+							available_nusd: 2_445_000_000,
+						},
+						premium: {
+							grant_nusd: 1_000_000_000,
+							used_nusd: 0,
+							held_nusd: 0,
+							available_nusd: 1_000_000_000,
+						},
+					},
+				}),
+		})
+
+		const account = await fetchOpengatesAccount(auth, fetcher, "task-1")
+		const roundTripped = OpengatesAccount.decode(OpengatesAccount.encode(account).finish())
+		expect(roundTripped.agentBudgetTask).toMatchObject({
+			mode: "shadow",
+			enforcementEnabled: false,
+			customerConsumption: false,
+			riskDependencyMissing: true,
+			id: "task-1",
+			preset: "feature",
+			capNusd: 450_000_000,
+			shadowUsedNusd: 25_000_000,
+			shadowHeldNusd: 5_000_000,
+			standard: { availableNusd: 2_445_000_000, heldNusd: 5_000_000 },
+			premium: { availableNusd: 1_000_000_000, heldNusd: 0 },
+		})
 	})
 
 	it("creates a Pro checkout with the signed-in email", async () => {

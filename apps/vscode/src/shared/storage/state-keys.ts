@@ -95,6 +95,8 @@ const GLOBAL_STATE_FIELDS = {
 	remoteWorkflowToggles: { default: {} as ClineRulesToggles },
 	remoteSkillsToggles: { default: {} as ClineRulesToggles },
 	dismissedBanners: { default: [] as Array<{ bannerId: string; dismissedAt: number }> },
+	// Latest server-owned OpenGates shadow-evaluation task for account status display.
+	opengatesAgentBudgetTaskId: { default: undefined as string | undefined },
 	// Last Local/Cloud choice (and repository) picked on the home screen for new tasks
 	cloudTaskTarget: { default: undefined as CloudTaskTargetSelection | undefined },
 	// Last agent status confirmed over a live connection, per cloud session id
