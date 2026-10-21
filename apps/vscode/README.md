@@ -35,7 +35,7 @@ streaming latency test. Feed `runs.json` to the server's
 `cmd/ola-agent-eval -sparks -evidence ...` checker.
 
 These artifacts contain only synthetic project content and usage, but still
-belong in a private evaluation directory, not the source repository. for VS Code
+belong in a private evaluation directory, not the source repository.
 
 ## Opengates account integration
 
