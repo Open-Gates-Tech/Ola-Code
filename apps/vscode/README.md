@@ -1,5 +1,42 @@
 # Ola Code for VS Code
 
+## Bounded live agent evaluation
+
+After `bun run build:sdk` at the monorepo root, run from this package:
+
+```powershell
+bun scripts\ola-live-eval.ts C:\path\to\OlaAI-Server\infra\production.routing.json C:\private\ola-evaluation
+```
+
+The configured `AZURE_OPENAI_API_KEY` must already be in the process environment.
+Do not put it in command arguments or output files. The runner only permits the
+price-checked Azure Global GPT-4.1-mini route; it does not activate other model
+prices or production billing. Docker and `node:22-alpine` are required.
+
+The 30 small tasks cover five independent bugfix, feature and public-reference
+research/scaffolding runs per Free/Pro label. Generated code executes only in
+networkless, read-only, resource-limited containers with no host credentials.
+Only project files can be edited; verification tests are immutable to the agent.
+These are bounded sanity fixtures, not a full working-day or multi-file quality
+benchmark. No hidden classifier or reviewer is configured in this harness.
+
+`exposure.json` persists a USD10 total experiment cap. Every upstream attempt,
+including SDK retries, needs a conservative reservation. Unknown usage retains
+its reservation. Do not delete/reset this journal to continue a failed run.
+The exclusive `experiment.lock` prevents concurrent writers; an abandoned lock
+requires checking the owning process before manually removing that named file.
+
+`runs.json` preserves failed runs and exact measured usage; `summary.json` records
+completion, cost, observed cache reads and single-wallet Sparks grant values.
+The separately labeled `cache-probe.json` observes a controlled long prefix in
+two agent turns, within the same USD10 cap. It is not a workflow cache guarantee.
+Evaluation SSE is buffered for evidence persistence, so this is not a production
+streaming latency test. Feed `runs.json` to the server's
+`cmd/ola-agent-eval -sparks -evidence ...` checker.
+
+These artifacts contain only synthetic project content and usage, but still
+belong in a private evaluation directory, not the source repository. for VS Code
+
 ## Opengates account integration
 
 The VS Code extension requires an Opengates account and routes inference through
