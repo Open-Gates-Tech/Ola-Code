@@ -15,15 +15,22 @@ export const CLINE_PASS_PROVIDER_ID = "cline-pass"
  * organization disallows.
  */
 export function useClinePassPromo() {
-	const { apiConfiguration, environment, navigateToSettings, remoteConfigSettings, mode, planActSeparateModelsSetting } =
-		useExtensionState()
+	const {
+		apiConfiguration,
+		environment,
+		navigateToSettings,
+		remoteConfigSettings,
+		mode,
+		planActSeparateModelsSetting,
+		opengatesAuthEnabled,
+	} = useExtensionState()
 	const { clineUser } = useClineAuth()
 	const { handleModeFieldChange } = useApiConfigurationHandlers()
 
 	const isSelfHostedOrUnknown = !environment || environment === "selfHosted"
 	const remoteProviders: string[] = remoteConfigSettings?.remoteConfiguredProviders || []
 	const isBlockedByRemoteConfig = remoteProviders.length > 0 && !remoteProviders.includes(CLINE_PASS_PROVIDER_ID)
-	const isClinePassEnabled = !isSelfHostedOrUnknown && !isBlockedByRemoteConfig
+	const isClinePassEnabled = !opengatesAuthEnabled && !isSelfHostedOrUnknown && !isBlockedByRemoteConfig
 
 	// Mirrors the switch action's scope: with separate plan/act models the
 	// promos only affect (and therefore only reflect) the current mode.

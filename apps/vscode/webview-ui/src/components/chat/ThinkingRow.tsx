@@ -1,5 +1,5 @@
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
-import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { memo, type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -12,6 +12,7 @@ interface ThinkingRowProps {
 	title?: string
 	isStreaming?: boolean
 	showChevron?: boolean
+	icon?: ReactNode
 }
 
 export const ThinkingRow = memo(
@@ -24,6 +25,7 @@ export const ThinkingRow = memo(
 		title = "Thinking",
 		isStreaming = false,
 		showChevron = true,
+		icon,
 	}: ThinkingRowProps) => {
 		const scrollRef = useRef<HTMLDivElement>(null)
 		const [canScrollUp, setCanScrollUp] = useState(false)
@@ -69,6 +71,7 @@ export const ThinkingRow = memo(
 						onClick={onToggle}
 						size="icon"
 						variant="icon">
+						{icon && <span className="mr-1.5 inline-flex items-center">{icon}</span>}
 						<span
 							className={cn("text-[13px] leading-[1.2]", {
 								"animate-shimmer bg-linear-90 from-foreground to-description bg-[length:200%_100%] bg-clip-text text-transparent":

@@ -99,6 +99,18 @@ coverage/**
 webview-ui/coverage/**
 webview-ui/.vite-port
 
+# Local F5/UI-validation VS Code profiles (contain user data and secrets; never ship)
+dist/dev-profile/**
+dist/dev-extensions/**
+dist/ui-validation-profile/**
+
+# Dev-only config files
+skills-lock.json
+webview-ui/.storybook/**
+webview-ui/components.json
+webview-ui/tailwind.config.mjs
+webview-ui/tsconfig*.json
+
 # Ignore Storybook files
 **/*.stories.tsx
 *storybook.log

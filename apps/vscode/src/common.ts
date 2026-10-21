@@ -10,6 +10,7 @@ import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
 import { HookProcessRegistry } from "./core/hooks/HookProcessRegistry"
 import { StateManager } from "./core/storage/StateManager"
 import { ExtensionRegistryInfo } from "./registry"
+import { OpengatesAuthService } from "./sdk/opengates-auth-service"
 import { registerVsCodeLmHandler } from "./sdk/vscode-lm/register-vscode-lm"
 import { registerClineClientIdentity } from "./services/ClineClientIdentity"
 import { ErrorService } from "./services/error"
@@ -113,9 +114,10 @@ async function showVersionUpdateAnnouncement(stateManager: StateManager) {
 
 			if (lastShownAnnouncementId !== latestAnnouncementId) {
 				// Show notification when there's a new announcement (major/minor updates or fresh installs)
+				const productName = OpengatesAuthService.get() ? "Ola Code" : "Cline"
 				const message = previousVersion
-					? `Cline has been updated to v${currentVersion}`
-					: `Welcome to Cline v${currentVersion}`
+					? `${productName} has been updated to v${currentVersion}`
+					: `Welcome to ${productName} v${currentVersion}`
 				HostProvider.window.showMessage({
 					type: ShowMessageType.INFORMATION,
 					message,

@@ -11,6 +11,7 @@ import { BrowserSettingsMenu } from "@/components/browser/BrowserSettingsMenu"
 import { ChatRowContent, ProgressIndicator } from "@/components/chat/ChatRow"
 import CodeBlock, { CODE_BLOCK_BG_COLOR } from "@/components/common/CodeBlock"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { getAssistantName } from "@/hooks/useAssistantName"
 import { cn } from "@/lib/utils"
 import { FileServiceClient } from "@/services/grpc-client"
 
@@ -106,7 +107,8 @@ const headerStyle: CSSProperties = {
 
 const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
 	const { messages, isLast, onHeightChange, lastModifiedMessage, onSetQuote } = props
-	const { browserSettings } = useExtensionState()
+	const { browserSettings, opengatesAuthEnabled } = useExtensionState()
+	const assistantName = getAssistantName(opengatesAuthEnabled)
 	const prevHeightRef = useRef(0)
 	const [maxActionHeight, setMaxActionHeight] = useState(0)
 	const [consoleLogsExpanded, setConsoleLogsExpanded] = useState(false)
@@ -359,7 +361,7 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
 					<span className="codicon codicon-inspect" style={browserIconStyle} />
 				)}
 				<span style={approveTextStyle}>
-					{isAutoApproved ? "Cline is using the browser:" : "Cline wants to use the browser:"}
+					{isAutoApproved ? `${assistantName} is using the browser:` : `${assistantName} wants to use the browser:`}
 				</span>
 			</div>
 			<div

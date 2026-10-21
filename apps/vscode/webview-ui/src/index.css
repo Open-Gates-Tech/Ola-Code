@@ -69,3 +69,623 @@
 		margin: calc(var(--design-unit) * 1px) 0;
 	}
 }
+
+/* Ola Code: Copilot-style compact chat surfaces */
+.ola-introduction {
+	width: 100%;
+	max-width: 20.8rem;
+}
+
+/* Responses render as plain text on the chat background, without card chrome. */
+.ola-assistant-message .assistant-text-content,
+.ola-assistant-message .assistant-completion-card {
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.ola-assistant-message .assistant-text-content {
+	padding: 0 0 26px;
+}
+
+.ola-assistant-message .assistant-completion-card > :first-child {
+	padding: 0 0 4px;
+	margin-bottom: 0;
+}
+
+.ola-assistant-message .completion-output-content,
+.ola-assistant-message .plan-completion-content {
+	padding: 4px 0 8px;
+}
+
+.ola-assistant-message p {
+	line-height: 1.65;
+	-webkit-line-clamp: unset;
+}
+
+/* Doubled class outranks the styled-components code block radius. */
+.ola-assistant-message.ola-assistant-message pre,
+.ola-assistant-message.ola-assistant-message pre > code,
+.ola-assistant-message.ola-assistant-message blockquote {
+	border-radius: 0;
+}
+
+.ola-assistant-message button:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 2px;
+}
+
+.ola-assistant-message .assistant-text-content:focus-within > .absolute {
+	opacity: 1;
+}
+
+.ola-thinking-icon {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	color: var(--vscode-foreground);
+}
+
+.ola-thinking-track {
+	opacity: 0;
+}
+
+/* Starts at 12 o'clock and runs clockwise, matching the rotation direction. */
+.ola-thinking-ring {
+	transform: rotate(-90deg);
+	transform-origin: 41.5px 41.5px;
+}
+
+.ola-thinking-smile {
+	transform-box: fill-box;
+	transform-origin: center;
+}
+
+.ola-thinking-icon-animated .ola-thinking-track {
+	opacity: 0.18;
+}
+
+.ola-thinking-icon-animated .ola-thinking-ring {
+	stroke-dasharray: 28 72;
+	animation: ola-thinking-spin 1.1s linear infinite;
+}
+
+.ola-thinking-icon-animated .ola-thinking-smile {
+	animation: ola-thinking-smile 1.6s ease-in-out infinite;
+}
+
+@keyframes ola-thinking-spin {
+	to {
+		transform: rotate(270deg);
+	}
+}
+
+@keyframes ola-thinking-smile {
+	0%,
+	100% {
+		opacity: 0.55;
+		transform: scale(0.92);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.06);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ola-thinking-icon-animated .ola-thinking-ring,
+	.ola-thinking-icon-animated .ola-thinking-smile {
+		animation: none;
+	}
+
+	.ola-thinking-icon-animated .ola-thinking-ring {
+		stroke-dasharray: none;
+	}
+}
+
+.ola-content-column {
+	width: 100%;
+	max-width: 900px;
+	min-width: 0;
+	margin-inline: auto;
+}
+
+.ola-chat-scrollbar {
+	scrollbar-width: thin;
+	scrollbar-color: var(--vscode-scrollbarSlider-background, rgba(128, 128, 128, 0.5)) transparent;
+	scrollbar-gutter: stable;
+}
+
+.ola-chat-scrollbar::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+.ola-chat-scrollbar::-webkit-scrollbar-thumb {
+	background-color: var(--vscode-scrollbarSlider-background, rgba(128, 128, 128, 0.5));
+	border: 2px solid transparent;
+	border-radius: 9999px;
+	background-clip: padding-box;
+}
+
+.ola-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: var(--vscode-scrollbarSlider-hoverBackground, rgba(128, 128, 128, 0.7));
+}
+
+.ola-chat-scrollbar::-webkit-scrollbar-thumb:active {
+	background-color: var(--vscode-scrollbarSlider-activeBackground, rgba(128, 128, 128, 0.9));
+}
+
+.ola-chat-scrollbar::-webkit-scrollbar-track,
+.ola-chat-scrollbar::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+.ola-changes-summary {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 4px 12px 0;
+	padding: 2px 4px;
+	border: none;
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	line-height: 18px;
+	cursor: pointer;
+}
+
+.ola-changes-summary:hover {
+	color: var(--vscode-foreground);
+}
+
+.ola-changes-summary:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
+}
+
+.ola-changes-summary--response {
+	margin: 4px 0 0;
+	padding: 2px 0;
+}
+
+.ola-composer {
+	margin: 4px 12px 12px;
+	border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, rgba(128, 128, 128, 0.35)));
+	border-radius: 16px;
+	background-color: var(--vscode-input-background);
+	transition: border-color 0.1s ease-in-out;
+}
+
+.ola-composer:focus-within {
+	border-color: var(--vscode-focusBorder);
+}
+
+.ola-composer:has(+ .ola-composer-footer) {
+	margin-bottom: 4px;
+}
+
+.ola-composer-footer {
+	margin: 0 12px 8px;
+	text-align: center;
+	font-size: 11px;
+	line-height: 16px;
+	color: var(--vscode-descriptionForeground);
+	user-select: none;
+}
+
+.ola-user-bubble {
+	width: fit-content;
+	margin-left: auto;
+	max-width: 85%;
+	border-radius: 16px;
+	border-bottom-right-radius: 4px;
+	background-color: var(--vscode-chat-requestBubbleBackground, var(--vscode-input-background));
+	color: var(--vscode-chat-requestBubbleForeground, var(--vscode-foreground));
+}
+
+.ola-pill-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: 1px solid transparent;
+	border-radius: 9999px;
+	padding: 3px 10px;
+	font-size: 12px;
+	line-height: 16px;
+	cursor: pointer;
+	background-color: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+}
+
+.ola-pill-button:hover:not(:disabled) {
+	background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.ola-pill-button[data-variant="primary"] {
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.ola-pill-button[data-variant="primary"]:hover:not(:disabled) {
+	background-color: var(--vscode-button-hoverBackground);
+}
+
+.ola-pill-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.ola-model-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	max-width: 8rem;
+	height: 22px;
+	padding: 0 8px 0 10px;
+	border: 1px solid transparent;
+	border-radius: 9999px;
+	background-color: transparent;
+	color: var(--vscode-foreground);
+	font-size: 11px;
+	cursor: pointer;
+	outline: none;
+}
+
+.ola-model-trigger:hover:not(:disabled),
+.ola-model-trigger[aria-expanded="true"] {
+	background-color: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
+}
+
+.ola-model-trigger:focus-visible {
+	border-color: var(--vscode-focusBorder);
+}
+
+.ola-model-trigger:disabled {
+	cursor: progress;
+	opacity: 0.6;
+}
+
+.ola-model-menu {
+	position: absolute;
+	bottom: calc(100% + 6px);
+	left: 0;
+	z-index: 50;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 220px;
+	padding: 6px;
+	border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, rgba(128, 128, 128, 0.35)));
+	border-radius: 12px;
+	background-color: var(--vscode-menu-background, var(--vscode-dropdown-background));
+	color: var(--vscode-menu-foreground, var(--vscode-dropdown-foreground));
+	box-shadow: 0 8px 24px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+}
+
+.ola-model-menu-heading {
+	padding: 2px 8px 4px;
+	font-size: 11px;
+	opacity: 0.7;
+}
+
+.ola-model-option {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	width: 100%;
+	padding: 6px 8px;
+	border: none;
+	border-radius: 8px;
+	background-color: transparent;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	outline: none;
+}
+
+.ola-model-option:hover:not(:disabled),
+.ola-model-option:focus-visible {
+	background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+	color: var(--vscode-menu-selectionForeground, inherit);
+}
+
+.ola-model-option:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.ola-model-option-description {
+	font-size: 11px;
+	opacity: 0.7;
+}
+/* Softer rounding for the Plan/Agent switch track */
+.ola-composer [data-testid="mode-switch"] {
+	border-radius: 9999px;
+}
+
+.ola-mode-switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, rgba(128, 128, 128, 0.35)));
+	user-select: none;
+}
+
+.ola-mode-switch[aria-disabled="true"] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.ola-mode-option {
+	border: none;
+	border-radius: 9999px;
+	padding: 2px 8px;
+	font-size: 11px;
+	line-height: 16px;
+	cursor: pointer;
+	white-space: nowrap;
+	background: transparent;
+	color: var(--vscode-input-foreground);
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.ola-mode-option:hover:not(:disabled):not(.ola-mode-option-selected) {
+	background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.ola-mode-option:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
+}
+
+.ola-mode-option:disabled {
+	cursor: not-allowed;
+}
+
+.ola-mode-option-selected {
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.ola-mode-option-selected[data-mode="plan"] {
+	background-color: var(--vscode-activityWarningBadge-background);
+	color: var(--vscode-activityWarningBadge-foreground, var(--vscode-button-foreground));
+}
+
+.ola-mode-option-selected[data-mode="interactive"] {
+	background-color: var(--vscode-charts-purple, var(--vscode-button-background));
+	color: #ffffff;
+}
+
+.ola-stop-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 9999px;
+	cursor: pointer;
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.ola-stop-button:hover:not(:disabled) {
+	background-color: var(--vscode-button-hoverBackground);
+}
+
+.ola-stop-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.ola-stop-button .codicon {
+	font-size: 12px;
+}
+
+.ola-account-card {
+	padding: 12px;
+	border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.25));
+	border-radius: 14px;
+	background-color: var(--vscode-sideBarSectionHeader-background, rgba(128, 128, 128, 0.06));
+}
+
+.ola-account-heading {
+	margin: 0;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	opacity: 0.75;
+}
+
+.ola-avatar {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 9999px;
+	object-fit: cover;
+	font-size: 14px;
+	font-weight: 600;
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.ola-tier-badge {
+	flex-shrink: 0;
+	padding: 1px 8px;
+	border-radius: 9999px;
+	font-size: 10px;
+	font-weight: 600;
+	background-color: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+}
+
+.ola-tier-badge[data-tier="pro"],
+.ola-tier-badge[data-tier="internal"] {
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.ola-usage-meter {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.ola-usage-meter[data-locked="true"] {
+	opacity: 0.7;
+}
+
+.ola-usage-track {
+	height: 6px;
+	overflow: hidden;
+	border-radius: 9999px;
+	background-color: rgba(128, 128, 128, 0.2);
+	/* biome-ignore lint/suspicious/noDuplicateProperties: rgba fallback for renderers without color-mix */
+	background-color: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+}
+
+.ola-usage-fill {
+	height: 100%;
+	border-radius: 9999px;
+	background-color: var(--vscode-progressBar-background, var(--vscode-button-background));
+	transition: width 0.3s ease;
+}
+
+.ola-usage-fill[data-low] {
+	background-color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.ola-account-facts {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 0;
+	font-size: 12px;
+}
+
+.ola-account-facts > div {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.ola-account-facts dt {
+	opacity: 0.7;
+}
+
+.ola-account-facts dd {
+	margin: 0;
+	text-align: right;
+}
+
+.ola-upgrade-card {
+	border-color: var(--vscode-focusBorder);
+}
+
+.ola-icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border: none;
+	border-radius: 9999px;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+}
+
+.ola-icon-button:hover:not(:disabled) {
+	background-color: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
+}
+
+.ola-icon-button:disabled {
+	cursor: progress;
+	opacity: 0.6;
+}
+
+.ola-history {
+	background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+	color: var(--vscode-foreground);
+}
+
+.ola-history-search {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent));
+	border-radius: 12px;
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+}
+
+.ola-history-search:focus-within {
+	border-color: var(--vscode-focusBorder);
+}
+
+.ola-history-search input {
+	width: 100%;
+	min-width: 0;
+	border: 0;
+	outline: none;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+}
+
+.ola-history-search input::placeholder {
+	color: var(--vscode-input-placeholderForeground);
+}
+
+.ola-history-card {
+	margin: 4px 12px 10px;
+	padding: 12px;
+	border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.25));
+	border-radius: 14px;
+}
+
+.ola-history-card:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.ola-history-open {
+	flex: 1;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+	color: inherit;
+	text-align: left;
+	font: inherit;
+	cursor: pointer;
+}
+
+.ola-history .ola-icon-button {
+	width: 28px;
+	height: 28px;
+}
+
+.ola-history .ola-pill-button[aria-pressed="true"] {
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+
+.ola-history button:focus-visible,
+.ola-history summary:focus-visible,
+.ola-history input[type="checkbox"]:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 3px;
+}

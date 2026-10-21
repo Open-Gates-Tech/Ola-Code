@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import ChatRow from "@/components/chat/ChatRow"
 import { StickyUserMessage } from "@/components/chat/task-header/StickyUserMessage"
+import Thumbnails from "@/components/common/Thumbnails"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { cn } from "@/lib/utils"
 import { useThinkingLoaderRow } from "../../hooks/useThinkingLoaderRow"
@@ -45,7 +46,7 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 	chatState,
 	messageHandlers,
 }) => {
-	const { clineMessages, turnState } = useExtensionState()
+	const { clineMessages, turnState, opengatesAuthEnabled } = useExtensionState()
 	const lastRawMessage = useMemo(() => clineMessages.at(-1), [clineMessages])
 
 	const {
@@ -194,13 +195,25 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 	// Keep footer as a simple spacer. Thinking loading is rendered as an in-list row.
 	const virtuosoComponents = useMemo(
 		() => ({
+			Header: opengatesAuthEnabled
+				? () => (
+						<div className="px-4 pt-3 pb-1">
+							<div className="ola-user-bubble px-3.5 py-2.5" data-testid="ola-task-bubble">
+								<p className="m-0 whitespace-pre-wrap break-words">{task.text}</p>
+								{task.images?.length || task.files?.length ? (
+									<Thumbnails files={task.files ?? []} images={task.images ?? []} />
+								) : null}
+							</div>
+						</div>
+					)
+				: undefined,
 			Footer: () => <div className="min-h-1" />,
 		}),
-		[],
+		[opengatesAuthEnabled, task],
 	)
 
 	return (
-		<div className="overflow-hidden flex flex-col h-full relative">
+		<div className="overflow-hidden flex min-h-0 flex-col h-full relative">
 			{/* Sticky User Message - positioned absolutely to avoid layout shifts */}
 			<div
 				className={cn(
@@ -214,7 +227,7 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 				/>
 			</div>
 
-			<div className="grow flex relative" ref={scrollContainerRef}>
+			<div className="grow min-h-0 flex relative" ref={scrollContainerRef}>
 				{/* Empty-list fast path: paint the loader immediately without waiting for the
 				    virtualized list's initial measure/render cycle. Mirrors the in-list row's
 				    markup (MessageRenderer wrapper + ChatRow) so the swap to a real row later
@@ -245,7 +258,7 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 						}
 					}}
 					atBottomThreshold={10} // trick to make sure virtuoso re-renders when task changes, and we use initialTopMostItemIndex to start at the bottom
-					className="scrollable grow overflow-y-scroll"
+					className={cn("scrollable grow overflow-y-scroll", opengatesAuthEnabled && "ola-chat-scrollbar")}
 					components={virtuosoComponents}
 					data={displayedGroupedMessages}
 					// increasing top by 3_000 to prevent jumping around when user collapses a row
@@ -259,8 +272,8 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 					rangeChanged={handleRangeChanged}
 					ref={virtuosoRef} // anything lower causes issues with followOutput
 					style={{
-						scrollbarWidth: "none", // Firefox
-						msOverflowStyle: "none", // IE/Edge
+						scrollbarWidth: opengatesAuthEnabled ? undefined : "none",
+						msOverflowStyle: opengatesAuthEnabled ? undefined : "none",
 						overflowAnchor: "none", // prevent scroll jump when content expands
 					}}
 				/>

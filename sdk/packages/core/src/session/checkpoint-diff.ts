@@ -151,15 +151,23 @@ export async function buildCheckpointWorkspaceDiff(
 	cwd: string,
 	checkpoint: CheckpointEntry,
 ): Promise<CheckpointContentDiff[]> {
-	const changedPaths = await listChangedPaths(cwd, checkpoint);
+	// Work from the repository root: `git diff`/`git show` use root-relative
+	// paths while `ls-files`/`ls-tree` are relative to the current directory,
+	// so a session started in a subfolder would otherwise fail to find every
+	// untracked file in the checkpoint and report it as entirely new.
+	const root = path.resolve(
+		cwd,
+		(await runGit(cwd, ["rev-parse", "--show-cdup"])).trim() || ".",
+	);
+	const changedPaths = await listChangedPaths(root, checkpoint);
 	const diffs = await Promise.all(
 		changedPaths.map(async (relativePath) => {
 			const [leftContent, rightContent] = await Promise.all([
-				readCheckpointFile(cwd, checkpoint.ref, relativePath),
-				readWorktreeFile(cwd, relativePath),
+				readCheckpointFile(root, checkpoint.ref, relativePath),
+				readWorktreeFile(root, relativePath),
 			]);
 			return {
-				filePath: resolveGitPath(cwd, relativePath),
+				filePath: resolveGitPath(root, relativePath),
 				leftContent,
 				rightContent,
 			};

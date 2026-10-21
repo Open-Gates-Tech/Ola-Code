@@ -43,7 +43,11 @@ import {
 	validateSlashCommand,
 } from "@/utils/slash-commands"
 import ClineRulesToggleModal from "../cline-rules/ClineRulesToggleModal"
+import { ActiveEditorChip } from "./ActiveEditorChip"
+import { ChangesSummaryBar } from "./ChangesSummaryBar"
 import { getModeToggleDraftAction } from "./chat-textarea-mode-toggle"
+import { OlaModelPicker } from "./OlaModelPicker"
+import { nextOlaMode, type OlaMode, OlaModeSwitch } from "./OlaModeSwitch"
 import ServersToggleModal from "./ServersToggleModal"
 
 const { MAX_IMAGES_AND_FILES_PER_MESSAGE } = CHAT_CONSTANTS
@@ -84,6 +88,10 @@ interface ChatTextAreaProps {
 	shouldDisableFilesAndImages: boolean
 	onHeightChange?: (height: number) => void
 	onFocusChange?: (isFocused: boolean) => void
+	/** Rendered inside the Ola composer card, above the text input. */
+	composerActions?: React.ReactNode
+	/** Replaces the Send button while the active request can be stopped. */
+	stopButton?: React.ReactNode
 }
 
 interface GitCommit {
@@ -211,6 +219,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			shouldDisableFilesAndImages,
 			onHeightChange,
 			onFocusChange,
+			composerActions,
+			stopButton,
 		},
 		ref,
 	) => {
@@ -230,6 +240,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			cloudTaskTarget,
 			currentCloudTask,
 			cloudModelId,
+			opengatesAuthEnabled,
+			olaInteractive,
 		} = useExtensionState()
 		// Cloud sessions are Act-only (like the desktop app and the cloud dashboard).
 		// While a cloud task is shown, or a new task is about to run in the cloud,
@@ -237,6 +249,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const cloudActOnly =
 			!!currentCloudTask || (clineMessages.length === 0 && !!cloudSessionsEnabled && cloudTaskTarget?.target === "cloud")
 		const mode = cloudActOnly ? "act" : selectedMode
+		const olaMode: OlaMode = mode === "plan" ? "plan" : olaInteractive ? "interactive" : "act"
 		const [isTextAreaFocused, setIsTextAreaFocused] = useState(false)
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		const [gitCommits, setGitCommits] = useState<GitCommit[]>([])
@@ -1038,63 +1051,80 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			[updateCursorPosition],
 		)
 
+		const requestModeChange = useCallback(
+			(nextMode: Mode, interactive?: boolean) => {
+				if (cloudActOnly) {
+					return
+				}
+				void (async () => {
+					const convertedProtoMode = nextMode === "plan" ? PlanActMode.PLAN : PlanActMode.ACT
+					const submittedText = inputValue
+					const submittedImages = selectedImages
+					const submittedFiles = selectedFiles
+					const response = await StateServiceClient.togglePlanActModeProto(
+						TogglePlanActModeRequest.create({
+							mode: convertedProtoMode,
+							interactive,
+							chatContent: {
+								message: submittedText.trim() ? submittedText : undefined,
+								images: submittedImages,
+								files: submittedFiles,
+							},
+						}),
+					)
+					// Focus the textarea after mode toggle with slight delay
+					setTimeout(() => {
+						const consumedComposerContent = response.value === true
+						const currentText = textAreaRef.current?.value ?? ""
+						// Reconcile only the submitted draft: the rebuild can take a moment
+						// and the user may have typed new content in the meantime.
+						const draftAction = getModeToggleDraftAction({
+							consumed: consumedComposerContent,
+							currentText,
+							submittedText,
+						})
+
+						switch (draftAction) {
+							case "clear":
+								setInputValue("")
+								break
+							case "restore":
+								setInputValue(submittedText)
+								break
+							case "keep":
+								break
+						}
+
+						if (consumedComposerContent) {
+							setSelectedImages((current) => (current === submittedImages ? [] : current))
+							setSelectedFiles((current) => (current === submittedFiles ? [] : current))
+						} else {
+							if (submittedImages.length > 0) {
+								setSelectedImages((current) => (current.length === 0 ? submittedImages : current))
+							}
+							if (submittedFiles.length > 0) {
+								setSelectedFiles((current) => (current.length === 0 ? submittedFiles : current))
+							}
+						}
+						textAreaRef.current?.focus()
+					}, 100)
+				})()
+			},
+			[cloudActOnly, inputValue, selectedImages, selectedFiles, setInputValue, setSelectedImages, setSelectedFiles],
+		)
+
+		const changeOlaMode = useCallback(
+			(next: OlaMode) => requestModeChange(next === "plan" ? "plan" : "act", next === "interactive"),
+			[requestModeChange],
+		)
+
 		const onModeToggle = useCallback(() => {
-			if (cloudActOnly) {
-				return
+			if (opengatesAuthEnabled) {
+				changeOlaMode(nextOlaMode(olaMode))
+			} else {
+				requestModeChange(mode === "plan" ? "act" : "plan")
 			}
-			void (async () => {
-				const convertedProtoMode = mode === "plan" ? PlanActMode.ACT : PlanActMode.PLAN
-				const submittedText = inputValue
-				const submittedImages = selectedImages
-				const submittedFiles = selectedFiles
-				const response = await StateServiceClient.togglePlanActModeProto(
-					TogglePlanActModeRequest.create({
-						mode: convertedProtoMode,
-						chatContent: {
-							message: submittedText.trim() ? submittedText : undefined,
-							images: submittedImages,
-							files: submittedFiles,
-						},
-					}),
-				)
-				// Focus the textarea after mode toggle with slight delay
-				setTimeout(() => {
-					const consumedComposerContent = response.value === true
-					const currentText = textAreaRef.current?.value ?? ""
-					// Reconcile only the submitted draft: the rebuild can take a moment
-					// and the user may have typed new content in the meantime.
-					const draftAction = getModeToggleDraftAction({
-						consumed: consumedComposerContent,
-						currentText,
-						submittedText,
-					})
-
-					switch (draftAction) {
-						case "clear":
-							setInputValue("")
-							break
-						case "restore":
-							setInputValue(submittedText)
-							break
-						case "keep":
-							break
-					}
-
-					if (consumedComposerContent) {
-						setSelectedImages((current) => (current === submittedImages ? [] : current))
-						setSelectedFiles((current) => (current === submittedFiles ? [] : current))
-					} else {
-						if (submittedImages.length > 0) {
-							setSelectedImages((current) => (current.length === 0 ? submittedImages : current))
-						}
-						if (submittedFiles.length > 0) {
-							setSelectedFiles((current) => (current.length === 0 ? submittedFiles : current))
-						}
-					}
-					textAreaRef.current?.focus()
-				}, 100)
-			})()
-		}, [cloudActOnly, mode, inputValue, selectedImages, selectedFiles, setInputValue, setSelectedImages, setSelectedFiles])
+		}, [opengatesAuthEnabled, changeOlaMode, olaMode, requestModeChange, mode])
 
 		useShortcut(usePlatform().togglePlanActKeys, onModeToggle, { disableTextInputs: false }) // important that we don't disable the text input here
 
@@ -1430,317 +1460,385 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			.replace(/.$/, (match) => match.toUpperCase())
 
 		return (
-			<div>
-				<div
-					className="relative flex transition-colors ease-in-out duration-100 px-3.5 py-2.5"
-					onDragEnter={handleDragEnter}
-					onDragLeave={handleDragLeave}
-					onDragOver={onDragOver}
-					onDrop={onDrop}>
-					{showDimensionError && (
-						<div className="absolute inset-2.5 bg-[rgba(var(--vscode-errorForeground-rgb),0.1)] border-2 border-error rounded-xs flex items-center justify-center z-10 pointer-events-none">
-							<span className="text-error font-bold text-xs text-center">Image dimensions exceed 7500px</span>
-						</div>
-					)}
-					{showUnsupportedFileError && (
-						<div className="absolute inset-2.5 bg-[rgba(var(--vscode-errorForeground-rgb),0.1)] border-2 border-error rounded-xs flex items-center justify-center z-10 pointer-events-none">
-							<span className="text-error font-bold text-xs">Files other than images are currently disabled</span>
-						</div>
-					)}
-					{showSlashCommandsMenu && (
-						<div ref={slashCommandsMenuContainerRef}>
-							<SlashCommandMenu
-								globalWorkflowToggles={globalWorkflowToggles}
-								localWorkflowToggles={localWorkflowToggles}
-								mcpServers={mcpServers}
-								onMouseDown={handleMenuMouseDown}
-								onSelect={handleSlashCommandsSelect}
-								query={slashCommandsQuery}
-								remoteWorkflows={remoteConfigSettings?.remoteGlobalWorkflows}
-								remoteWorkflowToggles={remoteWorkflowToggles}
-								selectedIndex={selectedSlashCommandsIndex}
-								setSelectedIndex={setSelectedSlashCommandsIndex}
-							/>
-						</div>
-					)}
-
-					{showContextMenu && (
-						<div ref={contextMenuContainerRef}>
-							<ContextMenu
-								dynamicSearchResults={fileSearchResults}
-								isLoading={searchLoading}
-								onMouseDown={handleMenuMouseDown}
-								onSelect={handleMentionSelect}
-								queryItems={queryItems}
-								searchQuery={searchQuery}
-								selectedIndex={selectedMenuIndex}
-								selectedType={selectedType}
-								setSelectedIndex={setSelectedMenuIndex}
-							/>
-						</div>
-					)}
-					<div
-						className={cn(
-							"absolute bottom-2.5 top-2.5 whitespace-pre-wrap break-words rounded-xs overflow-hidden bg-input-background",
-							isTextAreaFocused ? "left-3.5 right-3.5" : "left-3.5 right-3.5 border border-input-border",
-						)}
-						ref={highlightLayerRef}
-						style={{
-							position: "absolute",
-							pointerEvents: "none",
-							whiteSpace: "pre-wrap",
-							wordWrap: "break-word",
-							color: "transparent",
-							overflow: "hidden",
-							fontFamily: "var(--vscode-font-family)",
-							fontSize: "var(--vscode-editor-font-size)",
-							lineHeight: "var(--vscode-editor-line-height)",
-							borderRadius: 2,
-							borderLeft: isTextAreaFocused ? 0 : undefined,
-							borderRight: isTextAreaFocused ? 0 : undefined,
-							borderTop: isTextAreaFocused ? 0 : undefined,
-							borderBottom: isTextAreaFocused ? 0 : undefined,
-							padding: `9px 28px ${9 + thumbnailsHeight}px 9px`,
-						}}
-					/>
-					<DynamicTextArea
-						autoFocus={true}
-						data-testid="chat-input"
-						maxRows={10}
-						minRows={3}
-						onBlur={handleBlur}
-						onChange={(e) => {
-							handleInputChange(e)
-							updateHighlights()
-						}}
-						onFocus={() => {
-							setIsTextAreaFocused(true)
-							onFocusChange?.(true) // Call prop on focus
-						}}
-						onHeightChange={(height) => {
-							if (textAreaBaseHeight === undefined || height < textAreaBaseHeight) {
-								setTextAreaBaseHeight(height)
-							}
-							onHeightChange?.(height)
-						}}
-						onKeyDown={handleKeyDown}
-						onKeyUp={handleKeyUp}
-						onMouseUp={updateCursorPosition}
-						onPaste={handlePaste}
-						onScroll={() => updateHighlights()}
-						onSelect={updateCursorPosition}
-						placeholder={showUnsupportedFileError || showDimensionError ? "" : placeholderText}
-						ref={(el) => {
-							if (typeof ref === "function") {
-								ref(el)
-							} else if (ref) {
-								ref.current = el
-							}
-							textAreaRef.current = el
-						}}
-						style={{
-							width: "100%",
-							boxSizing: "border-box",
-							backgroundColor: "transparent",
-							color: "var(--vscode-input-foreground)",
-							//border: "1px solid var(--vscode-input-border)",
-							borderRadius: 2,
-							fontFamily: "var(--vscode-font-family)",
-							fontSize: "var(--vscode-editor-font-size)",
-							lineHeight: "var(--vscode-editor-line-height)",
-							resize: "none",
-							overflowX: "hidden",
-							overflowY: "scroll",
-							scrollbarWidth: "none",
-							// Since we have maxRows, when text is long enough it starts to overflow the bottom padding, appearing behind the thumbnails. To fix this, we use a transparent border to push the text up instead. (https://stackoverflow.com/questions/42631947/maintaining-a-padding-inside-of-text-area/52538410#52538410)
-							// borderTop: "9px solid transparent",
-							borderLeft: 0,
-							borderRight: 0,
-							borderTop: 0,
-							borderBottom: `${thumbnailsHeight}px solid transparent`,
-							borderColor: "transparent",
-							// borderRight: "54px solid transparent",
-							// borderLeft: "9px solid transparent", // NOTE: react-textarea-autosize doesn't calculate correct height when using borderLeft/borderRight so we need to use horizontal padding instead
-							// Instead of using boxShadow, we use a div with a border to better replicate the behavior when the textarea is focused
-							// boxShadow: "0px 0px 0px 1px var(--vscode-input-border)",
-							padding: "9px 28px 9px 9px",
-							cursor: "text",
-							flex: 1,
-							zIndex: 1,
-							outline:
-								isDraggingOver && !showUnsupportedFileError // Only show drag outline if not showing error
-									? "2px dashed var(--vscode-focusBorder)"
-									: isTextAreaFocused
-										? `1px solid ${mode === "plan" ? PLAN_MODE_COLOR : "var(--vscode-focusBorder)"}`
-										: "none",
-							outlineOffset: isDraggingOver && !showUnsupportedFileError ? "1px" : "0px", // Add offset for drag-over outline
-						}}
-						value={inputValue}
-					/>
-					{!inputValue && selectedImages.length === 0 && selectedFiles.length === 0 && (
-						<div className="text-xs absolute bottom-5 left-6.5 right-16 text-(--vscode-input-placeholderForeground)/50 whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none z-1">
-							Type @ for context, / for slash commands & workflows, hold shift to drag in files/images
-						</div>
-					)}
-					{(selectedImages.length > 0 || selectedFiles.length > 0) && (
-						<Thumbnails
-							files={selectedFiles}
-							images={selectedImages}
-							imagesUnsupported={unsupportedImagesAttached}
-							onHeightChange={handleThumbnailsHeightChange}
-							setFiles={setSelectedFiles}
-							setImages={setSelectedImages}
-							style={{
-								position: "absolute",
-								paddingTop: 4,
-								bottom: 14,
-								left: 22,
-								right: 47, // (54 + 9) + 4 extra padding
-								zIndex: 2,
+			<>
+				{opengatesAuthEnabled && <ChangesSummaryBar />}
+				<div className={opengatesAuthEnabled ? "ola-composer" : undefined} data-testid="chat-composer">
+					{opengatesAuthEnabled && composerActions}
+					{opengatesAuthEnabled && (
+						<ActiveEditorChip
+							onAttach={(text) => {
+								const draft = textAreaRef.current?.value ?? inputValue
+								if (!draft.includes(text)) {
+									setInputValue(draft ? `${draft}\n${text}` : text)
+								}
+								textAreaRef.current?.focus()
 							}}
 						/>
 					)}
 					<div
-						className="absolute flex items-end bottom-4.5 right-5 z-10 h-8 text-xs"
-						style={{ height: textAreaBaseHeight }}>
-						<div className="flex flex-row items-center">
+						className={cn(
+							"relative flex transition-colors ease-in-out duration-100",
+							opengatesAuthEnabled ? "px-1 pt-1" : "px-3.5 py-2.5",
+						)}
+						onDragEnter={handleDragEnter}
+						onDragLeave={handleDragLeave}
+						onDragOver={onDragOver}
+						onDrop={onDrop}>
+						{showDimensionError && (
+							<div className="absolute inset-2.5 bg-[rgba(var(--vscode-errorForeground-rgb),0.1)] border-2 border-error rounded-xs flex items-center justify-center z-10 pointer-events-none">
+								<span className="text-error font-bold text-xs text-center">Image dimensions exceed 7500px</span>
+							</div>
+						)}
+						{showUnsupportedFileError && (
+							<div className="absolute inset-2.5 bg-[rgba(var(--vscode-errorForeground-rgb),0.1)] border-2 border-error rounded-xs flex items-center justify-center z-10 pointer-events-none">
+								<span className="text-error font-bold text-xs">
+									Files other than images are currently disabled
+								</span>
+							</div>
+						)}
+						{showSlashCommandsMenu && (
+							<div ref={slashCommandsMenuContainerRef}>
+								<SlashCommandMenu
+									globalWorkflowToggles={globalWorkflowToggles}
+									localWorkflowToggles={localWorkflowToggles}
+									mcpServers={mcpServers}
+									onMouseDown={handleMenuMouseDown}
+									onSelect={handleSlashCommandsSelect}
+									query={slashCommandsQuery}
+									remoteWorkflows={remoteConfigSettings?.remoteGlobalWorkflows}
+									remoteWorkflowToggles={remoteWorkflowToggles}
+									selectedIndex={selectedSlashCommandsIndex}
+									setSelectedIndex={setSelectedSlashCommandsIndex}
+								/>
+							</div>
+						)}
+
+						{showContextMenu && (
+							<div ref={contextMenuContainerRef}>
+								<ContextMenu
+									dynamicSearchResults={fileSearchResults}
+									isLoading={searchLoading}
+									onMouseDown={handleMenuMouseDown}
+									onSelect={handleMentionSelect}
+									queryItems={queryItems}
+									searchQuery={searchQuery}
+									selectedIndex={selectedMenuIndex}
+									selectedType={selectedType}
+									setSelectedIndex={setSelectedMenuIndex}
+								/>
+							</div>
+						)}
+						<div
+							className={cn(
+								"absolute whitespace-pre-wrap break-words rounded-xs overflow-hidden bg-input-background",
+								opengatesAuthEnabled
+									? "bottom-0 top-1 left-1 right-1 bg-transparent"
+									: isTextAreaFocused
+										? "bottom-2.5 top-2.5 left-3.5 right-3.5"
+										: "bottom-2.5 top-2.5 left-3.5 right-3.5 border border-input-border",
+							)}
+							ref={highlightLayerRef}
+							style={{
+								position: "absolute",
+								pointerEvents: "none",
+								whiteSpace: "pre-wrap",
+								wordWrap: "break-word",
+								color: "transparent",
+								overflow: "hidden",
+								fontFamily: "var(--vscode-font-family)",
+								fontSize: "var(--vscode-editor-font-size)",
+								lineHeight: "var(--vscode-editor-line-height)",
+								borderRadius: 2,
+								borderLeft: isTextAreaFocused ? 0 : undefined,
+								borderRight: isTextAreaFocused ? 0 : undefined,
+								borderTop: isTextAreaFocused ? 0 : undefined,
+								borderBottom: isTextAreaFocused ? 0 : undefined,
+								padding: `9px 28px ${9 + thumbnailsHeight}px 9px`,
+							}}
+						/>
+						<DynamicTextArea
+							autoFocus={true}
+							data-testid="chat-input"
+							maxRows={10}
+							minRows={opengatesAuthEnabled && inputValue ? 1 : 3}
+							onBlur={handleBlur}
+							onChange={(e) => {
+								handleInputChange(e)
+								updateHighlights()
+							}}
+							onFocus={() => {
+								setIsTextAreaFocused(true)
+								onFocusChange?.(true) // Call prop on focus
+							}}
+							onHeightChange={(height) => {
+								if (textAreaBaseHeight === undefined || height < textAreaBaseHeight) {
+									setTextAreaBaseHeight(height)
+								}
+								onHeightChange?.(height)
+							}}
+							onKeyDown={handleKeyDown}
+							onKeyUp={handleKeyUp}
+							onMouseUp={updateCursorPosition}
+							onPaste={handlePaste}
+							onScroll={() => updateHighlights()}
+							onSelect={updateCursorPosition}
+							placeholder={showUnsupportedFileError || showDimensionError ? "" : placeholderText}
+							ref={(el) => {
+								if (typeof ref === "function") {
+									ref(el)
+								} else if (ref) {
+									ref.current = el
+								}
+								textAreaRef.current = el
+							}}
+							style={{
+								width: "100%",
+								boxSizing: "border-box",
+								backgroundColor: "transparent",
+								color: "var(--vscode-input-foreground)",
+								//border: "1px solid var(--vscode-input-border)",
+								borderRadius: 2,
+								fontFamily: "var(--vscode-font-family)",
+								fontSize: "var(--vscode-editor-font-size)",
+								lineHeight: "var(--vscode-editor-line-height)",
+								resize: "none",
+								overflowX: "hidden",
+								overflowY: "scroll",
+								scrollbarWidth: "none",
+								// Since we have maxRows, when text is long enough it starts to overflow the bottom padding, appearing behind the thumbnails. To fix this, we use a transparent border to push the text up instead. (https://stackoverflow.com/questions/42631947/maintaining-a-padding-inside-of-text-area/52538410#52538410)
+								// borderTop: "9px solid transparent",
+								borderLeft: 0,
+								borderRight: 0,
+								borderTop: 0,
+								borderBottom: `${thumbnailsHeight}px solid transparent`,
+								borderColor: "transparent",
+								// borderRight: "54px solid transparent",
+								// borderLeft: "9px solid transparent", // NOTE: react-textarea-autosize doesn't calculate correct height when using borderLeft/borderRight so we need to use horizontal padding instead
+								// Instead of using boxShadow, we use a div with a border to better replicate the behavior when the textarea is focused
+								// boxShadow: "0px 0px 0px 1px var(--vscode-input-border)",
+								padding: "9px 28px 9px 9px",
+								cursor: "text",
+								flex: 1,
+								zIndex: 1,
+								outline:
+									isDraggingOver && !showUnsupportedFileError // Only show drag outline if not showing error
+										? "2px dashed var(--vscode-focusBorder)"
+										: isTextAreaFocused && !opengatesAuthEnabled
+											? `1px solid ${mode === "plan" ? PLAN_MODE_COLOR : "var(--vscode-focusBorder)"}`
+											: "none",
+								outlineOffset: isDraggingOver && !showUnsupportedFileError ? "1px" : "0px", // Add offset for drag-over outline
+							}}
+							value={inputValue}
+						/>
+						{!inputValue && selectedImages.length === 0 && selectedFiles.length === 0 && (
 							<div
-								className={cn("input-icon-button", { disabled: sendingDisabled }, "codicon codicon-send text-sm")}
-								data-testid="send-button"
-								onClick={() => {
-									if (!sendingDisabled) {
-										onSend()
-									}
+								className={cn(
+									"text-xs absolute right-16 text-(--vscode-input-placeholderForeground)/50 whitespace-nowrap overflow-hidden text-ellipsis pointer-events-none z-1",
+									opengatesAuthEnabled ? "bottom-2.5 left-3.5" : "bottom-5 left-6.5",
+								)}>
+								Type @ for context, / for slash commands & workflows, hold shift to drag in files/images
+							</div>
+						)}
+						{(selectedImages.length > 0 || selectedFiles.length > 0) && (
+							<Thumbnails
+								files={selectedFiles}
+								images={selectedImages}
+								imagesUnsupported={unsupportedImagesAttached}
+								onHeightChange={handleThumbnailsHeightChange}
+								setFiles={setSelectedFiles}
+								setImages={setSelectedImages}
+								style={{
+									position: "absolute",
+									paddingTop: 4,
+									bottom: opengatesAuthEnabled ? 4 : 14,
+									left: opengatesAuthEnabled ? 12 : 22,
+									right: 47, // (54 + 9) + 4 extra padding
+									zIndex: 2,
 								}}
 							/>
+						)}
+						<div
+							className={cn(
+								"absolute flex items-end z-10 h-8 text-xs",
+								opengatesAuthEnabled ? "bottom-1 right-3" : "bottom-4.5 right-5",
+							)}
+							style={{ height: textAreaBaseHeight }}>
+							<div className="flex flex-row items-center">
+								{stopButton ?? (
+									<div
+										className={cn(
+											"input-icon-button",
+											{ disabled: sendingDisabled },
+											"codicon codicon-send text-sm",
+										)}
+										data-testid="send-button"
+										onClick={() => {
+											if (!sendingDisabled) {
+												onSend()
+											}
+										}}
+									/>
+								)}
+							</div>
 						</div>
 					</div>
-				</div>
-				{unsupportedImagesAttached && (
-					<div
-						className="flex items-center gap-1.5 px-3.5 pb-1.5 text-xs"
-						data-testid="images-unsupported-notice"
-						role="status"
-						style={{ color: "var(--vscode-editorWarning-foreground)" }}>
-						<TriangleAlertIcon className="shrink-0" size={12} />
-						<span className="min-w-0">
-							{selectedModelId} doesn't support images, so{" "}
-							{selectedImages.length === 1 ? "the attached image" : `the ${selectedImages.length} attached images`}{" "}
-							will be ignored.{" "}
-							<button
-								className="underline cursor-pointer bg-transparent border-0 p-0 m-0 text-[var(--vscode-textLink-foreground)] hover:text-[var(--vscode-textLink-activeForeground)]"
-								data-testid="images-unsupported-choose-model"
-								onClick={handleModelButtonClick}
-								type="button">
-								Choose an image-capable model
-							</button>{" "}
-							or remove {selectedImages.length === 1 ? "it" : "them"}.
-						</span>
-					</div>
-				)}
-				<div className="flex justify-between items-center -mt-[2px] px-3 pb-2">
-					{/* Always render both components, but control visibility with CSS */}
-					<div className="relative flex-1 min-w-0 h-5">
-						{/* ButtonGroup - always in DOM but visibility controlled */}
-						<ButtonGroup className="absolute top-0 left-0 right-0 ease-in-out w-full h-5 z-10 flex items-center">
-							<Tooltip>
-								<TooltipContent>Add Context</TooltipContent>
-								<TooltipTrigger>
-									<VSCodeButton
-										appearance="icon"
-										aria-label="Add Context"
-										className="p-0 m-0 flex items-center"
-										data-testid="context-button"
-										onClick={handleContextButtonClick}>
-										<ButtonContainer>
-											<AtSignIcon size={12} />
-										</ButtonContainer>
-									</VSCodeButton>
-								</TooltipTrigger>
-							</Tooltip>
-
-							<Tooltip>
-								<TooltipContent>Add Files & Images</TooltipContent>
-								<TooltipTrigger>
-									<VSCodeButton
-										appearance="icon"
-										aria-label="Add Files & Images"
-										className="p-0 m-0 flex items-center"
-										data-testid="files-button"
-										disabled={shouldDisableFilesAndImages}
-										onClick={() => {
-											if (!shouldDisableFilesAndImages) {
-												onSelectFilesAndImages()
-											}
-										}}>
-										<ButtonContainer>
-											<PlusIcon size={13} />
-										</ButtonContainer>
-									</VSCodeButton>
-								</TooltipTrigger>
-							</Tooltip>
-
-							<ServersToggleModal />
-
-							<ClineRulesToggleModal />
-
-							<ModelContainer>
-								<ModelButtonWrapper>
-									<ModelDisplayButton
-										disabled={false}
+					{unsupportedImagesAttached && (
+						<div
+							className="flex items-center gap-1.5 px-3.5 pb-1.5 text-xs"
+							data-testid="images-unsupported-notice"
+							role="status"
+							style={{ color: "var(--vscode-editorWarning-foreground)" }}>
+							<TriangleAlertIcon className="shrink-0" size={12} />
+							<span className="min-w-0">
+								{selectedModelId} doesn't support images, so{" "}
+								{selectedImages.length === 1
+									? "the attached image"
+									: `the ${selectedImages.length} attached images`}{" "}
+								will be ignored.{" "}
+								{opengatesAuthEnabled ? (
+									"Choose an image-capable model below"
+								) : (
+									<button
+										className="underline cursor-pointer bg-transparent border-0 p-0 m-0 text-[var(--vscode-textLink-foreground)] hover:text-[var(--vscode-textLink-activeForeground)]"
+										data-testid="images-unsupported-choose-model"
 										onClick={handleModelButtonClick}
-										role="button"
-										tabIndex={0}
-										title="Open API Settings">
-										<ModelButtonContent className="text-xs">{modelDisplayName}</ModelButtonContent>
-									</ModelDisplayButton>
-								</ModelButtonWrapper>
-							</ModelContainer>
-						</ButtonGroup>
-					</div>
-					{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
-					<Tooltip>
-						<TooltipContent
-							className="text-xs px-2 flex flex-col gap-1"
-							hidden={shownTooltipMode === null}
-							side="top">
-							{cloudActOnly ? (
-								"Cloud sessions only support Act mode for now."
-							) : (
-								<>
-									{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Cline will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
-									<p className="text-description/80 text-xs mb-0">
-										Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
-									</p>
-								</>
-							)}
-						</TooltipContent>
-						<TooltipTrigger>
-							<SwitchContainer
-								aria-disabled={cloudActOnly}
-								data-testid="mode-switch"
+										type="button">
+										Choose an image-capable model
+									</button>
+								)}{" "}
+								or remove {selectedImages.length === 1 ? "it" : "them"}.
+							</span>
+						</div>
+					)}
+					<div
+						className={cn(
+							"flex justify-between items-center",
+							opengatesAuthEnabled ? "px-2.5 pt-1 pb-2" : "-mt-[2px] px-3 pb-2",
+						)}>
+						{/* Always render both components, but control visibility with CSS */}
+						<div className="relative flex-1 min-w-0 h-5">
+							{/* ButtonGroup - always in DOM but visibility controlled */}
+							<ButtonGroup className="absolute top-0 left-0 right-0 ease-in-out w-full h-5 z-10 flex items-center">
+								<Tooltip>
+									<TooltipContent>Add Context</TooltipContent>
+									<TooltipTrigger>
+										<VSCodeButton
+											appearance="icon"
+											aria-label="Add Context"
+											className="p-0 m-0 flex items-center"
+											data-testid="context-button"
+											onClick={handleContextButtonClick}>
+											<ButtonContainer>
+												<AtSignIcon size={12} />
+											</ButtonContainer>
+										</VSCodeButton>
+									</TooltipTrigger>
+								</Tooltip>
+
+								<Tooltip>
+									<TooltipContent>Add Files & Images</TooltipContent>
+									<TooltipTrigger>
+										<VSCodeButton
+											appearance="icon"
+											aria-label="Add Files & Images"
+											className="p-0 m-0 flex items-center"
+											data-testid="files-button"
+											disabled={shouldDisableFilesAndImages}
+											onClick={() => {
+												if (!shouldDisableFilesAndImages) {
+													onSelectFilesAndImages()
+												}
+											}}>
+											<ButtonContainer>
+												<PlusIcon size={13} />
+											</ButtonContainer>
+										</VSCodeButton>
+									</TooltipTrigger>
+								</Tooltip>
+
+								{!opengatesAuthEnabled && <ServersToggleModal />}
+
+								{!opengatesAuthEnabled && <ClineRulesToggleModal />}
+
+								{opengatesAuthEnabled ? (
+									<OlaModelPicker />
+								) : (
+									<ModelContainer>
+										<ModelButtonWrapper>
+											<ModelDisplayButton
+												disabled={false}
+												onClick={handleModelButtonClick}
+												role="button"
+												tabIndex={0}
+												title="Open API Settings">
+												<ModelButtonContent className="text-xs">{modelDisplayName}</ModelButtonContent>
+											</ModelDisplayButton>
+										</ModelButtonWrapper>
+									</ModelContainer>
+								)}
+							</ButtonGroup>
+						</div>
+						{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
+						{opengatesAuthEnabled ? (
+							<OlaModeSwitch
 								disabled={cloudActOnly}
-								onClick={onModeToggle}>
-								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
-								{["Plan", "Act"].map((m) => (
-									<div
-										aria-checked={mode === m.toLowerCase()}
-										className={cn(
-											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
-											mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
-										)}
-										key={m}
-										onMouseLeave={() => setShownTooltipMode(null)}
-										onMouseOver={() => setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")}
-										role="switch">
-										{m}
-									</div>
-								))}
-							</SwitchContainer>
-						</TooltipTrigger>
-					</Tooltip>
+								disabledReason="Cloud sessions only support Agent mode for now."
+								onChange={changeOlaMode}
+								shortcut={togglePlanActKeys}
+								value={olaMode}
+							/>
+						) : (
+							<Tooltip>
+								<TooltipContent
+									className="text-xs px-2 flex flex-col gap-1"
+									hidden={shownTooltipMode === null}
+									side="top">
+									{cloudActOnly ? (
+										"Cloud sessions only support Act mode for now."
+									) : (
+										<>
+											{`In ${shownTooltipMode === "act" ? (opengatesAuthEnabled ? "Agent" : "Act") : "Plan"} mode, ${opengatesAuthEnabled ? "Ola" : "Cline"} will ${shownTooltipMode === "act" ? "work on the task" : "gather information to architect a plan"}`}
+											<p className="text-description/80 text-xs mb-0">
+												Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
+											</p>
+										</>
+									)}
+								</TooltipContent>
+								<TooltipTrigger>
+									<SwitchContainer
+										aria-disabled={cloudActOnly}
+										data-testid="mode-switch"
+										disabled={cloudActOnly}
+										onClick={onModeToggle}>
+										<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
+										{["Plan", "Act"].map((m) => (
+											<div
+												aria-checked={mode === m.toLowerCase()}
+												className={cn(
+													"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
+													mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
+												)}
+												key={m}
+												onMouseLeave={() => setShownTooltipMode(null)}
+												onMouseOver={() =>
+													setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")
+												}
+												role="switch">
+												{opengatesAuthEnabled && m === "Act" ? "Agent" : m}
+											</div>
+										))}
+									</SwitchContainer>
+								</TooltipTrigger>
+							</Tooltip>
+						)}
+					</div>
 				</div>
-			</div>
+				{opengatesAuthEnabled && (
+					<p className="ola-composer-footer" data-testid="ola-composer-footer">
+						From Opengates, a Theta company
+					</p>
+				)}
+			</>
 		)
 	},
 )

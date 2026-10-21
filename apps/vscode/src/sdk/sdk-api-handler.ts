@@ -27,6 +27,7 @@ import {
 	resolveVertexProviderConfig,
 } from "./cline-session-factory"
 import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
+import { getOpengatesProviderConfig } from "./opengates-provider"
 import { getProviderSettingsManager } from "./provider-migration"
 
 /**
@@ -118,6 +119,8 @@ export function buildSdkProviderConfig(
 	mode: Mode,
 	options?: BuildApiHandlerOptions,
 ): ProviderConfig {
+	const opengates = getOpengatesProviderConfig(configuration, mode)
+	if (opengates) return options?.disableReasoning ? { ...opengates, thinking: false } : opengates
 	const providerId = (mode === "plan" ? configuration.planModeApiProvider : configuration.actModeApiProvider) ?? "cline"
 
 	const apiKey = resolveApiKey(providerId, configuration)

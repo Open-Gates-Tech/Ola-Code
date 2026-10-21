@@ -3,8 +3,10 @@ import { combineCommandSequences } from "@shared/combineCommandSequences"
 import { combineHookSequences } from "@shared/combineHookSequences"
 import { getApiMetrics, getLastApiReqTotalTokens } from "@shared/getApiMetrics"
 import { BooleanRequest, StringRequest } from "@shared/proto/cline/common"
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useContext, useEffect, useMemo, useRef } from "react"
 import { useMount } from "react-use"
+import { OlaLogo } from "@/assets/OlaLogo"
+import { ClineAuthContext } from "@/context/ClineAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useShowNavbar } from "@/context/PlatformContext"
 import { useNormalizedApiConfiguration } from "@/hooks/useNormalizedApiConfiguration"
@@ -34,6 +36,7 @@ import {
 	isPendingResponseUnconfirmed,
 	withPendingUserMessage,
 } from "./chat-view/utils/pendingResponse"
+import { getOlaFirstName, getOlaGreeting, getOlaPlaceholder } from "./ola-greeting"
 
 interface ChatViewProps {
 	isHidden: boolean
@@ -62,7 +65,9 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		cloudSessionsEnabled,
 		cloudTaskTarget,
 		currentCloudTask,
+		opengatesAuthEnabled,
 	} = useExtensionState()
+	const olaFirstName = getOlaFirstName(useContext(ClineAuthContext)?.clineUser)
 	const isProdHostedApp = userInfo?.apiBaseUrl === "https://app.cline.bot"
 	const shouldShowQuickWins = isProdHostedApp && (!taskHistory || taskHistory.length < QUICK_WINS_HISTORY_THRESHOLD)
 
@@ -383,15 +388,28 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 	}, [queuedPromptCount, taskTs, scrollToBottomSmooth, scrollToBottomAuto, disableAutoScrollRef])
 
 	const placeholderText = useMemo(() => {
+		if (opengatesAuthEnabled) {
+			return getOlaPlaceholder(olaFirstName, Boolean(task))
+		}
 		const text = task ? "Type a message..." : "Type your task here..."
 		return text
-	}, [task])
+	}, [task, opengatesAuthEnabled, olaFirstName])
 
 	return (
 		<ChatLayout isHidden={isHidden}>
-			<div className="flex flex-col flex-1 overflow-hidden">
+			<div className={`flex min-h-0 flex-col flex-1 overflow-hidden ${opengatesAuthEnabled ? "ola-content-column" : ""}`}>
 				{showNavbar && <Navbar startNewTask={messageHandlers.startNewTask} />}
-				{task ? (
+				{opengatesAuthEnabled ? (
+					!task && (
+						<div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-5 text-center">
+							<OlaLogo className="mb-4 text-foreground" />
+							<h2 className="m-0 text-base font-semibold text-foreground">{getOlaGreeting(olaFirstName)}</h2>
+							<p className="ola-introduction m-0 text-sm text-description">
+								What are we building today? Ask Ola to explain, write, or fix code in your workspace.
+							</p>
+						</div>
+					)
+				) : task ? (
 					<TaskSection
 						apiMetrics={apiMetrics}
 						lastApiReqTotalTokens={lastApiReqTotalTokens}
@@ -425,24 +443,51 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 					/>
 				)}
 			</div>
-			<footer className="bg-(--vscode-sidebar-background) flex flex-col" style={{ gridRow: "2" }}>
-				<AutoApproveBar cloudAutoApprove={cloudAutoApprove} />
-				<ActionButtons
-					chatState={chatState}
-					messageHandlers={messageHandlers}
-					messages={messages}
-					mode={mode}
-					task={task}
-				/>
+			<footer
+				className={`bg-(--vscode-sidebar-background) flex shrink-0 flex-col ${opengatesAuthEnabled ? "ola-content-column" : ""}`}
+				style={{ gridRow: "2" }}>
+				{!opengatesAuthEnabled && <AutoApproveBar cloudAutoApprove={cloudAutoApprove} />}
+				{!opengatesAuthEnabled && (
+					<ActionButtons
+						chatState={chatState}
+						messageHandlers={messageHandlers}
+						messages={messages}
+						mode={mode}
+						task={task}
+					/>
+				)}
 				<QueuedPrompts items={queuedPrompts} />
-				<InputSection
-					chatState={chatState}
-					messageHandlers={messageHandlers}
-					placeholderText={placeholderText}
-					scrollBehavior={scrollBehavior}
-					selectFilesAndImages={selectFilesAndImages}
-					shouldDisableFilesAndImages={shouldDisableFilesAndImages}
-				/>
+				{opengatesAuthEnabled ? (
+					<ActionButtons
+						chatState={chatState}
+						messageHandlers={messageHandlers}
+						messages={messages}
+						mode={mode}
+						task={task}
+						variant="composer">
+						{({ pills, stopButton }) => (
+							<InputSection
+								chatState={chatState}
+								composerActions={pills}
+								messageHandlers={messageHandlers}
+								placeholderText={placeholderText}
+								scrollBehavior={scrollBehavior}
+								selectFilesAndImages={selectFilesAndImages}
+								shouldDisableFilesAndImages={shouldDisableFilesAndImages}
+								stopButton={stopButton}
+							/>
+						)}
+					</ActionButtons>
+				) : (
+					<InputSection
+						chatState={chatState}
+						messageHandlers={messageHandlers}
+						placeholderText={placeholderText}
+						scrollBehavior={scrollBehavior}
+						selectFilesAndImages={selectFilesAndImages}
+						shouldDisableFilesAndImages={shouldDisableFilesAndImages}
+					/>
+				)}
 			</footer>
 		</ChatLayout>
 	)

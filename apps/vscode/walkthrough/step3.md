@@ -1,7 +1,8 @@
-# Always Use the Best Models
+# Fast or Thinking: Your Choice
 
-**Connect your keys for Anthropic (Claude), Google (Gemini), OpenAI (GPT), and other leading LLMs.**
+**Ola runs on Opengates models. No API keys to manage.**
 
-Cline puts you at the forefront of AI. Bring your own API keys for leading models like Anthropic (Claude), Google (Gemini), and OpenAI (GPT). Always leverage the most powerful State-of-the-Art (SOTA) capabilities, ensuring you control both cost and cutting-edge performance.
+Sign in with your Opengates account and you're ready to go. Use the model picker in the chat box to choose:
 
-![Cline Models Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-models-hifi-3_compress.webp)
+- **Fast** for quick edits, questions, and everyday tasks.
+- **Thinking** for complex changes, debugging, and multi-step reasoning.

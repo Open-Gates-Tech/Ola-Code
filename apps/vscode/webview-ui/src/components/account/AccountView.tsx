@@ -19,6 +19,7 @@ import { ClinePassCard } from "./ClinePassCard"
 import { CreditBalance } from "./CreditBalance"
 import CreditsHistoryTable from "./CreditsHistoryTable"
 import { convertProtoUsageTransactions, getClineUris, getMainRole } from "./helpers"
+import { OpengatesAccountView } from "./OpengatesAccountView"
 import { RemoteConfigToggle } from "./RemoteConfigToggle"
 
 type AccountViewProps = {
@@ -45,7 +46,24 @@ type CachedData = {
 const ClineEnvOptions = ["Production", "Staging", "Local"] as const
 
 const AccountView = ({ onDone, clineUser, organizations, activeOrganization }: AccountViewProps) => {
-	const { environment } = useExtensionState()
+	const { environment, opengatesAuthEnabled } = useExtensionState()
+
+	if (opengatesAuthEnabled) {
+		return (
+			<div className="ola-content-column fixed inset-0 flex flex-col overflow-hidden">
+				<ViewHeader onDone={onDone} title="Account" />
+				<div className="ola-chat-scrollbar min-h-0 grow overflow-y-auto">
+					{clineUser ? (
+						<OpengatesAccountView user={clineUser} />
+					) : (
+						<div className="p-5">
+							<AccountWelcomeView />
+						</div>
+					)}
+				</div>
+			</div>
+		)
+	}
 
 	return (
 		<div className="fixed inset-0 flex flex-col overflow-hidden">
@@ -194,9 +212,9 @@ const ClineAccountView = ({ clineUser, userOrganizations, activeOrganization, cl
 								</div>
 							)}
 							{accountSwitch?.slow && (
-								<div className="mt-1 text-xs text-description" role="status">
+								<output className="mt-1 text-xs text-description">
 									Account switch is still pending. You can navigate while it finishes.
-								</div>
+								</output>
 							)}
 						</div>
 					</div>

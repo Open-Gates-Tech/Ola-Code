@@ -16,9 +16,21 @@ interface ApiConfigurationSectionProps {
 }
 
 const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiConfigurationSectionProps) => {
-	const { planActSeparateModelsSetting, mode, apiConfiguration } = useExtensionState()
+	const { planActSeparateModelsSetting, mode, apiConfiguration, opengatesAuthEnabled } = useExtensionState()
 	const [currentTab, setCurrentTab] = useState<Mode>(mode)
 	const { handleFieldsChange } = useApiConfigurationHandlers()
+	if (opengatesAuthEnabled) {
+		return (
+			<div>
+				{renderSectionHeader?.("api-config")}
+				<Section>
+					<p>Provider: Opengates</p>
+					<p>Model: ola-code-fast</p>
+					<p>Authentication and model access are managed by your Opengates account.</p>
+				</Section>
+			</div>
+		)
+	}
 	return (
 		<div>
 			{renderSectionHeader?.("api-config")}

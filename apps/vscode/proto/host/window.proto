@@ -157,8 +157,15 @@ message GetVisibleTabsResponse {
   repeated string paths = 1;
 }
 
-message GetActiveEditorRequest {}
+message GetActiveEditorRequest {
+  optional bool include_selection = 1;
+}
 
 message GetActiveEditorResponse {
   optional string file_path = 1;
+  optional string language_id = 2;
+  optional int32 start_line = 3;
+  optional int32 end_line = 4;
+  optional string selected_text = 5;
+  optional string context_id = 6;
 }

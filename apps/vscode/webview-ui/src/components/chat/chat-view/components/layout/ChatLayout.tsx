@@ -35,6 +35,8 @@ const ChatLayoutContainer = styled.div.withConfig({
 const MainContent = styled.div`
 	display: flex;
 	flex-direction: column;
+	min-height: 0;
+	min-width: 0;
 	overflow: hidden;
 	grid-row: 1;
 `

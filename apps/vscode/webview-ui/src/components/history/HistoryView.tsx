@@ -2,7 +2,7 @@ import { EmptyRequest, StringArrayRequest } from "@shared/proto/cline/common"
 import { GetTaskHistoryRequest, TaskFavoriteRequest, type TaskItem } from "@shared/proto/cline/task"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import Fuse, { FuseResult } from "fuse.js"
-import { FunnelIcon } from "lucide-react"
+import { FunnelIcon, MessageSquareIcon, SearchIcon, XIcon } from "lucide-react"
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { GroupedVirtuoso } from "react-virtuoso"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,8 @@ const HISTORY_PAGE_SIZE = 50
 
 const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const extensionStateContext = useExtensionState()
-	const { taskHistory, environment, cloudSessionsEnabled } = extensionStateContext
+	const { taskHistory, environment, cloudSessionsEnabled, opengatesAuthEnabled } = extensionStateContext
+	const [historyError, setHistoryError] = useState<string | null>(null)
 	const [searchQuery, setSearchQuery] = useState("")
 	const [sortOption, setSortOption] = useState<SortOption>("newest")
 	const [lastNonRelevantSort, setLastNonRelevantSort] = useState<SortOption | null>("newest")
@@ -82,6 +83,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			const requestId = ++historyRequestIdRef.current
 			isLoadingHistoryRef.current = true
 			setIsLoadingHistory(true)
+			setHistoryError(null)
 			try {
 				const startedAt = performance.now()
 				const response = await TaskServiceClient.getTaskHistory(
@@ -117,6 +119,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 				setNextHistoryOffset(offset + HISTORY_PAGE_SIZE)
 			} catch (error) {
 				console.error("Error loading task history:", error)
+				if (requestId === historyRequestIdRef.current) setHistoryError("Could not load conversations. Please try again.")
 			} finally {
 				if (requestId === historyRequestIdRef.current) {
 					isLoadingHistoryRef.current = false
@@ -167,6 +170,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 				}
 			} catch (err) {
 				console.error(`[FAVORITE_TOGGLE_UI] Error for task ${taskId}:`, err)
+				setHistoryError("Could not update favorites. Please try again.")
 				// Revert optimistic update
 				setPendingFavoriteToggles((prev) => {
 					const updated = { ...prev }
@@ -242,7 +246,10 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 					await loadTaskHistory(0)
 					await fetchTotalTasksSize()
 				})
-				.catch((error) => console.error("Error deleting task:", error))
+				.catch((error) => {
+					console.error("Error deleting task:", error)
+					setHistoryError("Could not delete this conversation. Please try again.")
+				})
 		},
 		[fetchTotalTasksSize, loadTaskHistory],
 	)
@@ -256,7 +263,10 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						setSelectedItems([])
 						await fetchTotalTasksSize()
 					})
-					.catch((error) => console.error("Error deleting tasks:", error))
+					.catch((error) => {
+						console.error("Error deleting tasks:", error)
+						setHistoryError("Could not delete selected conversations. Please try again.")
+					})
 			}
 		},
 		[fetchTotalTasksSize, loadTaskHistory],
@@ -270,7 +280,10 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 				setSelectedItems([])
 				await fetchTotalTasksSize()
 			})
-			.catch((error) => console.error("Error deleting task history:", error))
+			.catch((error) => {
+				console.error("Error deleting task history:", error)
+				setHistoryError("Could not delete history. Please try again.")
+			})
 			.finally(() => setDeleteAllDisabled(false))
 	}, [fetchTotalTasksSize, loadTaskHistory])
 
@@ -356,6 +369,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		if (olderTasks.length > 0) {
 			groups.push({ tasks: olderTasks, label: "Older" })
 		}
+		if (sortOption === "oldest") groups.reverse()
 
 		return {
 			groupedTasks: groups.flatMap((g) => g.tasks),
@@ -385,14 +399,91 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	)
 
 	return (
-		<div className="fixed overflow-hidden inset-0 flex flex-col w-full">
+		<div
+			className={`fixed overflow-hidden inset-0 flex flex-col w-full ${opengatesAuthEnabled ? "ola-history ola-content-column" : ""}`}>
 			{/* HEADER */}
-			<ViewHeader environment={environment} onDone={onDone} title="History" />
+			<ViewHeader environment={environment} onDone={onDone} title={opengatesAuthEnabled ? "Chat history" : "History"} />
 
 			{/* FILTERS */}
 			<div className="flex flex-col gap-3 px-3">
+				{opengatesAuthEnabled && (
+					<>
+						<p className="m-0 text-xs text-description">
+							Pick up where you left off. Chats are stored on this device.
+						</p>
+						<div className="ola-history-search">
+							<SearchIcon aria-hidden="true" size={15} />
+							<input
+								aria-label="Search conversations"
+								onChange={(event) => {
+									setSearchQuery(event.target.value)
+									if (event.target.value && !searchQuery && sortOption !== "mostRelevant") {
+										setLastNonRelevantSort(sortOption)
+										setSortOption("mostRelevant")
+									}
+								}}
+								placeholder="Search conversations..."
+								type="search"
+								value={searchQuery}
+							/>
+							{searchQuery && (
+								<button
+									aria-label="Clear search"
+									className="ola-icon-button"
+									onClick={() => setSearchQuery("")}
+									type="button">
+									<XIcon aria-hidden="true" size={14} />
+								</button>
+							)}
+						</div>
+						<div className="flex flex-wrap items-center gap-2">
+							<button
+								aria-pressed={showFavoritesOnly}
+								className="ola-pill-button"
+								onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+								type="button">
+								Favorites
+							</button>
+							<button
+								aria-pressed={showCurrentWorkspaceOnly}
+								className="ola-pill-button"
+								onClick={() => setShowCurrentWorkspaceOnly(!showCurrentWorkspaceOnly)}
+								type="button">
+								This workspace
+							</button>
+							{cloudSessionsEnabled && (
+								<button
+									aria-pressed={showCloudOnly}
+									className="ola-pill-button"
+									onClick={() => setShowCloudOnly(!showCloudOnly)}
+									type="button">
+									Cloud
+								</button>
+							)}
+							<Select
+								onValueChange={(value) => {
+									if (value === "newest" || value === "oldest" || value === "mostRelevant") {
+										setSortOption(value)
+										if (value !== "mostRelevant") setLastNonRelevantSort(value)
+									}
+								}}
+								value={sortOption}>
+								<SelectTrigger aria-label="Sort conversations" className="ml-auto w-auto rounded-full">
+									{HISTORY_FILTERS[sortOption]}
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="newest">Newest</SelectItem>
+									<SelectItem value="oldest">Oldest</SelectItem>
+									<SelectItem disabled={!searchQuery} value="mostRelevant">
+										Most relevant
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</>
+				)}
 				{/* REPLACE VSCODE RADIO GROUP */}
-				<div className="flex justify-between items-center">
+				<div className={opengatesAuthEnabled ? "hidden" : "flex justify-between items-center"}>
 					{/* SEARCH BOX */}
 					<VSCodeTextField
 						className="w-full"
@@ -494,12 +585,45 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						</SelectContent>
 					</Select>
 				</div>
+				{historyError && (
+					<div className="px-3 py-2">
+						<p className="m-0 text-xs text-error" role="alert">
+							{historyError}
+						</p>
+						<button
+							className="ola-pill-button mt-2"
+							disabled={isLoadingHistory}
+							onClick={() => void loadTaskHistory(0)}
+							type="button">
+							Retry
+						</button>
+					</div>
+				)}
+				{opengatesAuthEnabled && tasks.length === 0 && !historyError && (
+					<div className="px-6 py-8 text-center text-description" role="status">
+						<MessageSquareIcon aria-hidden="true" className="mx-auto mb-3" size={24} />
+						<p className="m-0 text-sm">
+							{isLoadingHistory
+								? "Loading conversations..."
+								: searchQuery || showFavoritesOnly || showCurrentWorkspaceOnly || showCloudOnly
+									? "No matching conversations"
+									: "Your conversations will appear here"}
+						</p>
+						{!isLoadingHistory && (
+							<p className="mt-2 text-xs">
+								{searchQuery || showFavoritesOnly || showCurrentWorkspaceOnly || showCloudOnly
+									? "Try a different search or change your filters."
+									: "Start a chat with Ola, then return here to continue it."}
+							</p>
+						)}
+					</div>
+				)}
 			</div>
 
 			{/* HISTORY ITEMS */}
-			<div className="flex-grow overflow-y-auto m-0 w-full py-2">
+			<div className="min-h-0 flex-grow overflow-hidden m-0 w-full py-2">
 				<GroupedVirtuoso
-					className="flex-grow overflow-y-scroll"
+					className={`h-full overflow-y-scroll ${opengatesAuthEnabled ? "ola-chat-scrollbar" : ""}`}
 					components={{
 						Footer: () =>
 							hasMoreTasks ? (
@@ -519,6 +643,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						const item = groupedTasks[index]
 						return (
 							<HistoryViewItem
+								compact={opengatesAuthEnabled}
 								handleDeleteHistoryItem={handleDeleteHistoryItem}
 								handleHistorySelect={handleHistorySelect}
 								index={index}
@@ -534,34 +659,73 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 
 			{/* FOOTER */}
 			<div className="p-2.5 border-t border-t-border-panel">
-				<div className="flex gap-2.5 mb-2.5">
-					<Button className="flex-1" onClick={() => handleBatchHistorySelect(true)} variant="secondary">
-						Select All
-					</Button>
-					<Button className="flex-1" onClick={() => handleBatchHistorySelect(false)} variant="secondary">
-						Select None
-					</Button>
-				</div>
-				{selectedItems.length > 0 ? (
-					<Button
-						aria-label="Delete selected items"
-						className="w-full"
-						onClick={() => {
-							handleDeleteSelectedHistoryItems(selectedItems)
-						}}
-						variant="danger">
-						Delete {selectedItems.length > 1 ? selectedItems.length : ""} Selected
-						{selectedItemsSize > 0 ? ` (${formatSize(selectedItemsSize)})` : ""}
-					</Button>
+				{opengatesAuthEnabled ? (
+					<div className="flex flex-wrap items-center gap-2">
+						<span className="text-xs text-description">
+							{selectedItems.length ? `${selectedItems.length} selected` : "Select chats to manage them"}
+						</span>
+						<button
+							className="ola-pill-button ml-auto"
+							disabled={tasks.length === 0}
+							onClick={() => handleBatchHistorySelect(selectedItems.length === 0)}
+							type="button">
+							{selectedItems.length ? "Clear selection" : "Select loaded"}
+						</button>
+						{selectedItems.length > 0 && (
+							<button
+								className="ola-pill-button"
+								onClick={() => handleDeleteSelectedHistoryItems(selectedItems)}
+								type="button">
+								Delete selected
+							</button>
+						)}
+						<details className="w-full text-xs text-description">
+							<summary className="cursor-pointer py-2">Storage &amp; cleanup</summary>
+							<p>
+								Local history
+								{totalTasksSize !== null ? ` uses ${formatSize(totalTasksSize)}` : " is saved on this device"}.
+							</p>
+							<button
+								className="ola-pill-button"
+								disabled={deleteAllDisabled || (taskHistory.length === 0 && tasks.length === 0)}
+								onClick={handleDeleteAllHistory}
+								type="button">
+								Delete all history
+							</button>
+						</details>
+					</div>
 				) : (
-					<Button
-						aria-label="Delete all history"
-						className="w-full"
-						disabled={deleteAllDisabled || (taskHistory.length === 0 && tasks.length === 0)}
-						onClick={handleDeleteAllHistory}
-						variant="danger">
-						Delete All History{totalTasksSize !== null ? ` (${formatSize(totalTasksSize)})` : ""}
-					</Button>
+					<>
+						<div className="flex gap-2.5 mb-2.5">
+							<Button className="flex-1" onClick={() => handleBatchHistorySelect(true)} variant="secondary">
+								Select All
+							</Button>
+							<Button className="flex-1" onClick={() => handleBatchHistorySelect(false)} variant="secondary">
+								Select None
+							</Button>
+						</div>
+						{selectedItems.length > 0 ? (
+							<Button
+								aria-label="Delete selected items"
+								className="w-full"
+								onClick={() => {
+									handleDeleteSelectedHistoryItems(selectedItems)
+								}}
+								variant="danger">
+								Delete {selectedItems.length > 1 ? selectedItems.length : ""} Selected
+								{selectedItemsSize > 0 ? ` (${formatSize(selectedItemsSize)})` : ""}
+							</Button>
+						) : (
+							<Button
+								aria-label="Delete all history"
+								className="w-full"
+								disabled={deleteAllDisabled || (taskHistory.length === 0 && tasks.length === 0)}
+								onClick={handleDeleteAllHistory}
+								variant="danger">
+								Delete All History{totalTasksSize !== null ? ` (${formatSize(totalTasksSize)})` : ""}
+							</Button>
+						)}
+					</>
 				)}
 			</div>
 		</div>

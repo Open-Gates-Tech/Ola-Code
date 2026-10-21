@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { Logger } from "@/shared/services/Logger"
+import { getTerminalBranding } from "./terminal-branding"
 
 export interface TerminalInfo {
 	terminal: vscode.Terminal
@@ -25,8 +26,7 @@ export class TerminalRegistry {
 	static createTerminal(cwd?: string | vscode.Uri | undefined, shellPath?: string): TerminalInfo {
 		const terminalOptions: vscode.TerminalOptions = {
 			cwd,
-			name: "Cline",
-			iconPath: new vscode.ThemeIcon("cline-icon"),
+			...getTerminalBranding(),
 			env: {
 				CLINE_ACTIVE: "true",
 				// Override $SHELL to match the selected shell profile so that

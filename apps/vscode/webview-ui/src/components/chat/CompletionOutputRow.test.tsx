@@ -59,6 +59,19 @@ describe("CompletionOutputRow", () => {
 		expect(screen.getByRole("button", { name: "Copy response" })).toBeInTheDocument()
 	})
 
+	it("renders a footer under the response", () => {
+		render(
+			<CompletionOutputRow
+				footer={<span>2 files changed</span>}
+				handleQuoteClick={vi.fn()}
+				quoteButtonState={hiddenQuoteButton}
+				text="All done!"
+			/>,
+		)
+
+		expect(screen.getByText("2 files changed")).toBeInTheDocument()
+	})
+
 	it("copies the response text to the clipboard", async () => {
 		render(<CompletionOutputRow handleQuoteClick={vi.fn()} quoteButtonState={hiddenQuoteButton} text="All done!" />)
 

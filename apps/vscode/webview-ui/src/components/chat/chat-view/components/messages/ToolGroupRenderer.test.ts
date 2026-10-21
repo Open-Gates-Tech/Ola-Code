@@ -1,4 +1,4 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
+import type { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
 import { describe, expect, it } from "vitest"
 import { buildToolsWithReasoning, getToolGroupSummaryFromParsedTools } from "./ToolGroupRenderer"
 
@@ -55,5 +55,11 @@ describe("getToolGroupSummaryFromParsedTools", () => {
 		])
 
 		expect(getToolGroupSummaryFromParsedTools(tools.map((tool) => tool.parsedTool))).toBe("Cline read 1 file")
+	})
+
+	it("uses the given assistant name for searches", () => {
+		const tools = [{ tool: "searchFiles", path: "src", regex: "foo" }] as ClineSayTool[]
+
+		expect(getToolGroupSummaryFromParsedTools(tools, "Ola")).toBe("Ola performed 1 search")
 	})
 })

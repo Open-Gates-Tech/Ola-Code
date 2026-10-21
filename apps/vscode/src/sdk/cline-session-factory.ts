@@ -51,6 +51,8 @@ import { nonNegativeFiniteNumber, positiveFiniteNumber, toSdkApiFormat } from ".
 import { parseProviderId } from "./model-catalog/provider-id"
 import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
 import { createProviderConfigStore, resolveRuntimeModelSelection } from "./model-catalog/store"
+import { OpengatesAuthService } from "./opengates-auth-service"
+import { getOpengatesProviderConfig } from "./opengates-provider"
 import { getProviderSettingsManager } from "./provider-migration"
 import { buildSapProviderConfig, type SapProviderConfig } from "./sap-config"
 import type { SdkSessionHost } from "./session-host"
@@ -910,7 +912,17 @@ export function resolveApiLine(providerId: string, config: ApiConfiguration): Pr
  * This replaces the previous two-path approach (SDK ProviderSettingsManager +
  * StateManager.buildApiHandlerSettings) which both failed silently.
  */
+export const OLA_INTERACTIVE_INSTRUCTIONS = `# Interactive Mode
+
+The user chose Interactive mode to collaborate before work begins.
+- Before editing files, running commands, or making other changes for a new request, ask concise clarifying questions about goals, constraints, and anything ambiguous. Skip questions the request already answers.
+- Then summarize your understanding and proposed approach in a few bullets, and ask the user to confirm or adjust it.
+- Do not change files or run commands until the user confirms the approach. Reading files to understand the request is allowed.
+- After confirmation, carry out the work like Agent mode. If something significant changes the plan, check in before continuing.
+- Use the follow-up question tool when available to ask questions and wait for answers.`
+
 export async function buildSessionConfig(input: SessionConfigInput): Promise<CoreSessionConfig> {
+	await OpengatesAuthService.get()?.requireAuthentication()
 	const cwd = input.cwd
 	if (!cwd) {
 		throw new Error("buildSessionConfig requires a cwd resolved by the host controller")
@@ -1024,6 +1036,20 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		}
 	}
 
+	const opengates = getOpengatesProviderConfig(apiConfig, mode)
+	if (opengates) {
+		providerId = opengates.providerId
+		modelId = opengates.modelId
+		apiKey = opengates.apiKey
+		baseUrl = opengates.baseUrl
+		apiLine = undefined
+		bedrockProviderConfig = undefined
+		vertexProviderConfig = undefined
+		sapProviderConfig = undefined
+		ollamaProviderConfig = undefined
+		azureProviderConfig = undefined
+	}
+
 	// Final defaults. Keep this aligned with the provider catalog so the UI and
 	// session factory share one source of truth for default models.
 	providerId = providerId ?? DEFAULT_PROVIDER_ID
@@ -1089,6 +1115,10 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	} catch (error) {
 		Logger.warn("[SessionFactory] Failed to build system prompt, using minimal fallback:", error)
 		systemPrompt = "You are Cline, a highly skilled software engineer. Help the user with their request."
+	}
+
+	if (opengates && mode === "act" && StateManager.get().getGlobalSettingsKey("olaInteractive") === true) {
+		systemPrompt = `${systemPrompt}\n\n${OLA_INTERACTIVE_INSTRUCTIONS}`
 	}
 
 	// Inject preferred language instructions when a non-default language is selected.
@@ -1163,6 +1193,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		// otherwise falls back to a small default output cap (CLINE-2911).
 		...(maxTokensPerTurn !== undefined ? { maxOutputTokens: maxTokensPerTurn } : {}),
 		fetch: resolveProviderFetch(sdkProviderId, baseUrl),
+		...(opengates ?? {}),
 	}
 
 	const config: CoreSessionConfig = {
@@ -1182,7 +1213,8 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		checkpoint: {
 			enabled: enableCheckpoints,
 		},
-		enableSpawnAgent: false,
+		// Ola lets the agent delegate focused subtasks to parallel sub-agents; teams have no UI yet.
+		enableSpawnAgent: opengates !== undefined,
 		enableAgentTeams: false,
 		...(useAutoCondense
 			? {

@@ -1,0 +1,82 @@
+[
+  {
+    "alias": "ola-code-fast",
+    "upstream": "gpt-4.1-mini-ola",
+    "base_url": "https://ola-ai-resource.openai.azure.com/openai/v1",
+    "key_env": "AZURE_OPENAI_API_KEY",
+    "bucket": "fast",
+    "credits_per_token": 1,
+    "context_tokens": 262144,
+    "pricing": {
+      "version": "azure-list-gpt-4.1-mini-global-v1",
+      "input_nusd": 400,
+      "cached_nusd": 100,
+      "cache_write_nusd": 400,
+      "output_nusd": 1600
+    }
+  },
+  {
+    "alias": "ola-code-reason",
+    "upstream": "gpt-4.1-mini-ola",
+    "base_url": "https://ola-ai-resource.openai.azure.com/openai/v1",
+    "key_env": "AZURE_OPENAI_API_KEY",
+    "bucket": "reason",
+    "credits_per_token": 1,
+    "context_tokens": 262144,
+    "pricing": {
+      "version": "azure-list-gpt-4.1-mini-global-v1",
+      "input_nusd": 400,
+      "cached_nusd": 100,
+      "cache_write_nusd": 400,
+      "output_nusd": 1600
+    }
+  },
+  {
+    "alias": "ola-code-pro",
+    "upstream": "gpt-4.1-mini-ola",
+    "base_url": "https://ola-ai-resource.openai.azure.com/openai/v1",
+    "key_env": "AZURE_OPENAI_API_KEY",
+    "bucket": "reason",
+    "credits_per_token": 1,
+    "context_tokens": 262144,
+    "pricing": {
+      "version": "azure-list-gpt-4.1-mini-global-v1",
+      "input_nusd": 400,
+      "cached_nusd": 100,
+      "cache_write_nusd": 400,
+      "output_nusd": 1600
+    }
+  },
+  {
+    "alias": "ola-consumer-standard",
+    "upstream": "gpt-4.1-mini-ola",
+    "base_url": "https://ola-ai-resource.openai.azure.com/openai/v1",
+    "key_env": "AZURE_OPENAI_API_KEY",
+    "bucket": "fast",
+    "credits_per_token": 1,
+    "context_tokens": 262144,
+    "pricing": {
+      "version": "azure-list-gpt-4.1-mini-global-v1",
+      "input_nusd": 400,
+      "cached_nusd": 100,
+      "cache_write_nusd": 400,
+      "output_nusd": 1600
+    }
+  },
+  {
+    "alias": "ola-consumer-deep",
+    "upstream": "gpt-4.1-mini-ola",
+    "base_url": "https://ola-ai-resource.openai.azure.com/openai/v1",
+    "key_env": "AZURE_OPENAI_API_KEY",
+    "bucket": "reason",
+    "credits_per_token": 1,
+    "context_tokens": 262144,
+    "pricing": {
+      "version": "azure-list-gpt-4.1-mini-global-v1",
+      "input_nusd": 400,
+      "cached_nusd": 100,
+      "cache_write_nusd": 400,
+      "output_nusd": 1600
+    }
+  }
+]

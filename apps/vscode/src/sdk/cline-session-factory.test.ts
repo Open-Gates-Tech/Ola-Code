@@ -16,6 +16,7 @@ import {
 	getHistoryItemById,
 	normalizeProviderReasoningSettings,
 	normalizeSdkBaseUrl,
+	OLA_INTERACTIVE_INSTRUCTIONS,
 	resolveApiKey,
 	resolveAzureProviderConfig,
 	resolveProviderFetch,
@@ -23,6 +24,7 @@ import {
 } from "./cline-session-factory"
 import { parseProviderId } from "./model-catalog/provider-id"
 import { createProviderConfigStore } from "./model-catalog/store"
+import { OpengatesAuthService } from "./opengates-auth-service"
 
 const mocks = vi.hoisted(() => {
 	const providerSettingsManager = {
@@ -1549,6 +1551,52 @@ describe("buildSessionConfig", () => {
 		// instead of a tool it does not have.
 		expect(planConfig.systemPrompt).not.toContain("switch_to_act_mode")
 		expect(planConfig.systemPrompt).toContain("Plan/Act toggle")
+	})
+
+	it("adds Ola Interactive instructions only to Opengates Agent sessions with Interactive enabled", async () => {
+		mocks.stateManager.getApiConfiguration.mockReturnValue({} as any)
+		mocks.stateManager.getGlobalSettingsKey.mockImplementation((key: string) => (key === "olaInteractive" ? true : undefined))
+		const auth = vi
+			.spyOn(OpengatesAuthService, "get")
+			.mockReturnValue({ requireAuthentication: vi.fn(async () => undefined) } as any)
+		try {
+			const interactive = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "act" })
+			const plan = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "plan" })
+			expect(interactive.systemPrompt).toContain(OLA_INTERACTIVE_INSTRUCTIONS)
+			expect(plan.systemPrompt).not.toContain("# Interactive Mode")
+
+			mocks.stateManager.getGlobalSettingsKey.mockImplementation(() => undefined)
+			const agent = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "act" })
+			expect(agent.systemPrompt).not.toContain("# Interactive Mode")
+
+			auth.mockReturnValue(undefined)
+			mocks.stateManager.getGlobalSettingsKey.mockImplementation((key: string) =>
+				key === "olaInteractive" ? true : undefined,
+			)
+			const nonOla = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "act" })
+			expect(nonOla.systemPrompt).not.toContain("# Interactive Mode")
+		} finally {
+			auth.mockRestore()
+		}
+	})
+
+	it("enables sub-agents (not teams) only for Opengates sessions", async () => {
+		mocks.stateManager.getApiConfiguration.mockReturnValue({} as any)
+		const auth = vi
+			.spyOn(OpengatesAuthService, "get")
+			.mockReturnValue({ requireAuthentication: vi.fn(async () => undefined) } as any)
+		try {
+			const ola = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "act" })
+			expect(ola.enableSpawnAgent).toBe(true)
+			expect(ola.enableAgentTeams).toBe(false)
+
+			auth.mockReturnValue(undefined)
+			const nonOla = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "act" })
+			expect(nonOla.enableSpawnAgent).toBe(false)
+			expect(nonOla.enableAgentTeams).toBe(false)
+		} finally {
+			auth.mockRestore()
+		}
 	})
 
 	it("builds a coherent remote runtime model and platform snapshot", async () => {

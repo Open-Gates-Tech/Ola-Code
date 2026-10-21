@@ -16,6 +16,7 @@ import {
 	NetworkIcon,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useAssistantName } from "@/hooks/useAssistantName"
 import MarkdownBlock from "../common/MarkdownBlock"
 
 interface SubagentStatusRowProps {
@@ -178,6 +179,7 @@ function SubagentPromptText({ prompt, isExpanded, onShowMore }: SubagentPromptTe
 }
 
 export default function SubagentStatusRow({ message, isLast, lastModifiedMessage }: SubagentStatusRowProps) {
+	const assistantName = useAssistantName()
 	const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({})
 	const [expandedPrompts, setExpandedPrompts] = useState<Record<number, boolean>>({})
 	const data = useMemo(() => parseSubagentRowData(message), [message])
@@ -197,7 +199,7 @@ export default function SubagentStatusRow({ message, isLast, lastModifiedMessage
 			resumedBeforeNextVisibleMessage)
 
 	const singular = data.items.length === 1
-	const title = singular ? "Cline wants to use a subagent:" : "Cline wants to use subagents:"
+	const title = singular ? `${assistantName} wants to use a subagent:` : `${assistantName} wants to use subagents:`
 	const isPromptConstructionRow = message.ask === "use_subagents" || message.say === "use_subagents"
 	const toggleItem = (index: number) => {
 		setExpandedItems((prev) => ({

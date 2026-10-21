@@ -1,6 +1,6 @@
 import { EmptyRequest } from "@shared/proto/cline/common"
 import { GitCompareIcon } from "lucide-react"
-import { memo, useEffect, useState } from "react"
+import { memo, type ReactNode, useEffect, useState } from "react"
 import { CheckpointsServiceClient } from "@/services/grpc-client"
 import { CopyButton } from "../common/CopyButton"
 import SuccessButton from "../common/SuccessButton"
@@ -22,6 +22,8 @@ interface CompletionOutputRowProps {
 	 * simply renders no button.
 	 */
 	showViewChanges?: boolean
+	/** Extra content rendered under the response (e.g. Ola's changes summary). */
+	footer?: ReactNode
 }
 
 /**
@@ -32,7 +34,7 @@ interface CompletionOutputRowProps {
  * rather than a definitive task completion.
  */
 export const CompletionOutputRow = memo(
-	({ text, quoteButtonState, handleQuoteClick, showViewChanges }: CompletionOutputRowProps) => {
+	({ text, quoteButtonState, handleQuoteClick, showViewChanges, footer }: CompletionOutputRowProps) => {
 		const [viewChangesPending, setViewChangesPending] = useState(false)
 		// undefined = still checking; the button stays hidden until the host
 		// confirms the latest run actually changed files. A count of 0 also
@@ -68,7 +70,7 @@ export const CompletionOutputRow = memo(
 		}, [showViewChanges])
 
 		return (
-			<div className="rounded-sm border border-success/20 overflow-visible bg-success/10">
+			<div className="assistant-completion-card rounded-sm border border-success/20 overflow-visible bg-success/10">
 				<div className="flex items-center justify-between gap-2 pl-2 pr-1 pt-1 -mb-1.5">
 					<span className="text-xs font-medium uppercase tracking-wider text-success/70">Completed</span>
 					<CopyButton ariaLabel="Copy response" className="text-success/70" textToCopy={text} />
@@ -79,6 +81,7 @@ export const CompletionOutputRow = memo(
 						<QuoteButton left={quoteButtonState.left} onClick={handleQuoteClick} top={quoteButtonState.top} />
 					)}
 				</div>
+				{footer}
 				{showViewChanges && hasChanges === true && (
 					<div className="px-2 pb-2">
 						<SuccessButton

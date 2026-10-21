@@ -112,11 +112,30 @@ const TS_PROTO_OPTIONS = [
 	"useDate=false", // Timestamp fields will not be automatically converted to Date.
 ]
 
+const GENERATED_DIRS = [TS_OUT_DIR, path.resolve("src/generated")]
+
 async function main() {
+	// Regenerate in place and prune stale files afterwards, so running watchers (tsc/esbuild during F5)
+	// never observe the generated modules as missing.
+	const startedAtMs = Date.now() - 1000
 	await cleanup()
 	await compileProtos()
 	await generateProtoBusSetup()
 	await generateHostBridgeClient()
+	await pruneStaleGeneratedFiles(startedAtMs)
+}
+
+async function pruneStaleGeneratedFiles(startedAtMs) {
+	for (const dir of GENERATED_DIRS) {
+		const files = await globby("**/*", { cwd: dir, absolute: true, onlyFiles: true })
+		for (const file of files) {
+			const { mtimeMs } = await fs.stat(file)
+			if (mtimeMs < startedAtMs) {
+				log_verbose(chalk.cyan(`Removing stale generated file ${file}`))
+				await rmrf(file)
+			}
+		}
+	}
 }
 async function compileProtos() {
 	console.log(chalk.bold.blue("Compiling Protocol Buffers..."))
@@ -178,11 +197,6 @@ function tsProtoc(outDir, protoFiles, protoOptions) {
 }
 
 async function cleanup() {
-	// Clean up existing generated files
-	log_verbose(chalk.cyan("Cleaning up existing generated TypeScript files..."))
-	await rmrf(TS_OUT_DIR)
-	await rmrf("src/generated")
-
 	// Clean up generated files that were moved.
 	await rmrf("src/standalone/services/host-grpc-client.ts")
 	await rmrf("src/standalone/server-setup.ts")

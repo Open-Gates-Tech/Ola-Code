@@ -1,7 +1,5 @@
 # Beyond Autocomplete: True Agentic Planning
 
-**Cline analyzes your request, explores your code, and presents a clear plan.**
+**Ola analyzes your request, explores your code, and presents a clear plan.**
 
-Watch Cline break down complex tasks, ask clarifying questions, and outline its approach. Understand the 'why' before any code is written, ensuring changes align with your architecture and intent.
-
-![Cline planning demonstration](https://storage.googleapis.com/cline_public_images/docs/assets/cline-plan-hifi-1_compress.webp)
+Switch to **Plan** mode and Ola breaks complex tasks down, asks clarifying questions, and outlines its approach before writing any code. Prefer to collaborate step by step? **Interactive** mode asks questions first and waits for your confirmation before changing files or running commands.

@@ -1,6 +1,7 @@
 import type { Boolean, EmptyRequest } from "@shared/proto/cline/common"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import AccountView from "./components/account/AccountView"
+import { AccountWelcomeView } from "./components/account/AccountWelcomeView"
 import ChatView from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import MarketplaceView from "./components/marketplace/MarketplaceView"
@@ -17,6 +18,7 @@ import { UiServiceClient } from "./services/grpc-client"
 const AppContent = () => {
 	const {
 		didHydrateState,
+		opengatesAuthEnabled,
 		showWelcome,
 		shouldShowAnnouncement,
 		showMarketplace,
@@ -40,7 +42,13 @@ const AppContent = () => {
 		hideAnnouncement,
 	} = useExtensionState()
 
-	const { clineUser, organizations, activeOrganization, accountSwitch, accountSwitchError } = useClineAuth()
+	const { clineUser, isAuthReady, authError, organizations, activeOrganization, accountSwitch, accountSwitchError } =
+		useClineAuth()
+	const [hasOpenedChat, setHasOpenedChat] = useState(false)
+
+	useEffect(() => {
+		if (clineUser) setHasOpenedChat(true)
+	}, [clineUser])
 
 	const showUpdateAnnouncementModal = useCallback(() => {
 		setShowAnnouncement(true)
@@ -54,59 +62,99 @@ const AppContent = () => {
 	}, [setShouldShowAnnouncement, setShowAnnouncement])
 
 	useEffect(() => {
-		if (!didHydrateState || showWelcome || !shouldShowAnnouncement || showAnnouncement) {
+		if (opengatesAuthEnabled || !didHydrateState || showWelcome || !shouldShowAnnouncement || showAnnouncement) {
 			return
 		}
 		showUpdateAnnouncementModal()
-	}, [didHydrateState, showWelcome, shouldShowAnnouncement, showAnnouncement, showUpdateAnnouncementModal])
+	}, [
+		opengatesAuthEnabled,
+		didHydrateState,
+		showWelcome,
+		shouldShowAnnouncement,
+		showAnnouncement,
+		showUpdateAnnouncementModal,
+	])
 
 	// Open the ClinePass subscription page once auth completes. Lives here (not in OnboardingView)
 	// because handleAuthCallback unmounts onboarding before the clineUser update arrives.
 	useEffect(() => {
-		if (clineUser?.uid) {
+		if (clineUser?.uid && !opengatesAuthEnabled) {
 			openClinePassSubscriptionIfPending(clineUser.appBaseUrl)
 		}
-	}, [clineUser?.uid, clineUser?.appBaseUrl])
+	}, [clineUser?.uid, clineUser?.appBaseUrl, opengatesAuthEnabled])
 
 	if (!didHydrateState) {
 		return null
 	}
 
-	if (showWelcome) {
+	const authGate =
+		opengatesAuthEnabled &&
+		(!isAuthReady ? (
+			<output className="p-5">Restoring your Opengates session...</output>
+		) : !clineUser || authError ? (
+			<div>
+				{authError && (
+					<p className="p-5" role="alert">
+						{authError}
+					</p>
+				)}
+				<AccountWelcomeView />
+			</div>
+		) : null)
+
+	if (authGate && !hasOpenedChat) return authGate
+
+	if (showWelcome && !opengatesAuthEnabled) {
 		return <OnboardingView />
 	}
 
 	return (
 		<div className="flex h-screen w-full flex-col">
-			{(accountSwitch || accountSwitchError) && !showAccount && (
-				<div className="z-50 bg-editor-background p-2 text-xs" role="status">
-					{accountSwitch
-						? accountSwitch.slow
-							? "Account switch is still pending. You can navigate while it finishes."
-							: "Switching account…"
-						: `Could not confirm account switch: ${accountSwitchError}`}
-				</div>
-			)}
-			{showSettings && <SettingsView navigationRequest={settingsNavigationRequest} onDone={hideSettings} />}
-			{showHistory && <HistoryView onDone={hideHistory} />}
-			{showMarketplace && <MarketplaceView initialType={mcpTab ? "mcp" : undefined} onDone={closeMarketplaceView} />}
-			{showMcp && <McpView initialTab={mcpTab} onDone={closeMcpView} />}
-			{showAccount && (
-				<AccountView
-					activeOrganization={activeOrganization}
-					clineUser={clineUser}
-					onDone={hideAccount}
-					organizations={organizations}
+			{authGate}
+			<div className={authGate ? "hidden" : "contents"}>
+				{(accountSwitch || accountSwitchError) && !showAccount && (
+					<output className="z-50 bg-editor-background p-2 text-xs">
+						{accountSwitch
+							? accountSwitch.slow
+								? "Account switch is still pending. You can navigate while it finishes."
+								: "Switching account…"
+							: `Could not confirm account switch: ${accountSwitchError}`}
+					</output>
+				)}
+				{!opengatesAuthEnabled && showSettings && (
+					<SettingsView navigationRequest={settingsNavigationRequest} onDone={hideSettings} />
+				)}
+				{showHistory && <HistoryView onDone={hideHistory} />}
+				{!opengatesAuthEnabled && showMarketplace && (
+					<MarketplaceView initialType={mcpTab ? "mcp" : undefined} onDone={closeMarketplaceView} />
+				)}
+				{opengatesAuthEnabled && showMarketplace && <McpView initialTab={mcpTab} onDone={closeMarketplaceView} />}
+				{showMcp && <McpView initialTab={mcpTab} onDone={closeMcpView} />}
+				{showAccount && (
+					<AccountView
+						activeOrganization={activeOrganization}
+						clineUser={clineUser}
+						onDone={hideAccount}
+						organizations={organizations}
+					/>
+				)}
+				{showWorktrees && <WorktreesView onDone={hideWorktrees} />}
+				{/* Do not conditionally load ChatView, it's expensive and there's state we don't want to lose (user input, disableInput, askResponse promise, etc.) */}
+				<ChatView
+					hideAnnouncement={hideAnnouncement}
+					isHidden={
+						!!authGate ||
+						(!opengatesAuthEnabled && showSettings) ||
+						showHistory ||
+						showMarketplace ||
+						showMcp ||
+						showAccount ||
+						showWorktrees
+					}
+					showAnnouncement={showAnnouncement}
+					showHistoryView={navigateToHistory}
 				/>
-			)}
-			{showWorktrees && <WorktreesView onDone={hideWorktrees} />}
-			{/* Do not conditionally load ChatView, it's expensive and there's state we don't want to lose (user input, disableInput, askResponse promise, etc.) */}
-			<ChatView
-				hideAnnouncement={hideAnnouncement}
-				isHidden={showSettings || showHistory || showMarketplace || showMcp || showAccount || showWorktrees}
-				showAnnouncement={showAnnouncement}
-				showHistoryView={navigateToHistory}
-			/>
+			</div>
 		</div>
 	)
 }

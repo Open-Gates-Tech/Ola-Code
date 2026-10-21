@@ -3,6 +3,8 @@ import { WorktreeDefaults } from "@shared/proto/cline/worktree"
 import { getWorkspacePath } from "@utils/path"
 import path from "path"
 import { getDocumentsPath } from "@/core/storage/disk"
+import { ExtensionRegistryInfo } from "@/registry"
+import { productDocumentsDirectory } from "@/shared/storage/product-paths"
 import { Controller } from ".."
 
 /**
@@ -28,9 +30,9 @@ export async function getWorktreeDefaults(_controller: Controller, _request: Emp
 	const suffix = generateRandomSuffix()
 
 	// Generate suggested branch name
-	const suggestedBranch = `worktree/cline-${suffix}`
+	const suggestedBranch = `worktree/${ExtensionRegistryInfo.name}-${suffix}`
 
-	// Generate suggested path in Documents/Cline/Worktrees/<project-name>-<suffix>
+	// Keep generated worktrees in the product's own Documents directory.
 	const documentsPath = await getDocumentsPath()
 	const cwd = await getWorkspacePath()
 
@@ -40,7 +42,7 @@ export async function getWorktreeDefaults(_controller: Controller, _request: Emp
 		projectName = path.basename(cwd)
 	}
 
-	const suggestedPath = path.join(documentsPath, "Cline", "Worktrees", `${projectName}-${suffix}`)
+	const suggestedPath = path.join(documentsPath, productDocumentsDirectory, "Worktrees", `${projectName}-${suffix}`)
 
 	return WorktreeDefaults.create({
 		suggestedBranch,

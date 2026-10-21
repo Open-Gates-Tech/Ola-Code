@@ -1,5 +1,6 @@
 import { LightbulbIcon } from "lucide-react"
 import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { useAssistantName } from "@/hooks/useAssistantName"
 import { cn } from "@/lib/utils"
 
 interface FeatureTipItem {
@@ -57,6 +58,7 @@ export const FeatureTip = memo(() => {
 	const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 	const currentTip = FEATURE_TIPS[tipIndex]
+	const assistantName = useAssistantName()
 
 	const advanceTip = useCallback(() => {
 		setIsFading(true)
@@ -99,7 +101,7 @@ export const FeatureTip = memo(() => {
 			)}>
 			<LightbulbIcon className="size-3 text-description shrink-0 mt-[1px]" />
 			<span className="text-xs text-description leading-relaxed">
-				<span className="font-medium">Tip:</span> {currentTip.text}
+				<span className="font-medium">Tip:</span> {currentTip.text.replaceAll("Cline", assistantName)}
 			</span>
 		</div>
 	)

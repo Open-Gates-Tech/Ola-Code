@@ -42,7 +42,7 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
 	messageHandlers,
 	footerActive,
 }) => {
-	const { mode } = useExtensionState()
+	const { mode, opengatesAuthEnabled } = useExtensionState()
 
 	const isLastMessage = useMemo(() => index === groupedMessages?.length - 1, [groupedMessages, index])
 
@@ -95,6 +95,12 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({
 		<div
 			className={cn({
 				"pb-2.5": isLastMessage && !footerActive,
+				"ola-assistant-message":
+					opengatesAuthEnabled &&
+					(messageOrGroup.say === "text" ||
+						messageOrGroup.say === "completion_result" ||
+						messageOrGroup.say === "plan_completion_result" ||
+						messageOrGroup.ask === "completion_result"),
 			})}
 			data-message-ts={messageOrGroup.ts}>
 			<ChatRow

@@ -1,8 +1,8 @@
 import * as fs from "fs/promises"
-import * as os from "os"
 import * as path from "path"
 import { Environment, type EnvironmentConfig } from "./shared/config-types"
 import { Logger } from "./shared/services/Logger"
+import { resolveProductHomeDir } from "./shared/storage/product-paths"
 
 export { Environment } /**
  * Schema for the endpoints.json configuration file used in on-premise deployments.
@@ -127,7 +127,7 @@ class ClineEndpoint {
 	 * Located at ~/.cline/endpoints.json
 	 */
 	private static getEndpointsFilePath(): string {
-		return path.join(os.homedir(), ".cline", "endpoints.json")
+		return path.join(resolveProductHomeDir(), "endpoints.json")
 	}
 
 	/**

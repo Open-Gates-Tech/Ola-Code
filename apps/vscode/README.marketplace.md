@@ -1,142 +1,122 @@
-# Cline
-<div align="center">
-<table>
-<tbody>
-<td align="center">
-<a href="https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev" target="_blank"><strong>Download on VS Marketplace</strong></a>
-</td>
-<td align="center">
-<a href="https://discord.gg/cline" target="_blank"><strong>Discord</strong></a>
-</td>
-<td align="center">
-<a href="https://www.reddit.com/r/cline/" target="_blank"><strong>r/cline</strong></a>
-</td>
-<td align="center">
-<a href="https://github.com/cline/cline/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop" target="_blank"><strong>Feature Requests</strong></a>
-</td>
-<td align="center">
-<a href="https://docs.cline.bot/getting-started/installing-cline" target="_blank"><strong>Getting Started</strong></a>
-</td>
-</tbody>
-</table>
-</div>
 
-Meet Cline, an AI assistant that can use your **CLI** a**N**d **E**ditor.
+# Ola Code
 
-Thanks to [Claude Sonnet's agentic coding capabilities](https://www.anthropic.com/claude/sonnet), Cline can handle complex software development tasks step-by-step. With tools that let him create & edit files, explore large projects, use the browser, and execute terminal commands (after you grant permission), he can assist you in ways that go beyond code completion or tech support. Cline can even use the Model Context Protocol (MCP) to create new tools and extend his own capabilities. While autonomous AI scripts traditionally run in sandboxed environments, this extension provides a human-in-the-loop GUI to approve every file change and terminal command, providing a safe and accessible way to explore the potential of agentic AI.
+**Autonomous AI Software Engineering in VS Code — Built by [Opengates](https://opengates.app), a Theta company.**
 
-1. Enter your task and add images to convert mockups into functional apps or fix bugs with screenshots.
-2. Cline starts by analyzing your file structure & source code ASTs, running regex searches, and reading relevant files to get up to speed in existing projects. By carefully managing what information is added to context, Cline can provide valuable assistance even for large, complex projects without overwhelming the context window.
-3. Once Cline has the information he needs, he can:
-    - Create and edit files + monitor linter/compiler errors along the way, letting him proactively fix issues like missing imports and syntax errors on his own.
-    - Execute commands directly in your terminal and monitor their output as he works, letting him e.g., react to dev server issues after editing a file.
-    - For web development tasks, Cline can launch the site in a headless browser, click, type, scroll, and capture screenshots + console logs, allowing him to fix runtime errors and visual bugs.
-4. When a task is completed, Cline will present the result to you with a terminal command like `open -a "Google Chrome" index.html`, which you run with a click of a button.
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=opengates.ola-code">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/opengates.ola-code.svg?style=flat-square&label=VS%20Code%20Marketplace&color=0f172a" alt="VS Code Marketplace Version">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=opengates.ola-code">
+    <img src="https://img.shields.io/visual-studio-marketplace/i/opengates.ola-code.svg?style=flat-square&color=1e3a8a" alt="Installs">
+  </a>
+  <a href="https://github.com/Open-Gates-Tech/ola-code/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-334155.svg?style=flat-square" alt="License">
+  </a>
+</p>
 
-> [!TIP]
-> Follow [this guide](https://docs.cline.bot/usage/ide#move-cline-to-the-right-sidebar) to open Cline on the right side of your editor. This lets you use Cline side-by-side with your file explorer, and see how he changes your workspace more clearly.
+<p align="center">
+  <a href="https://www.opengates.app/signup"><strong>Create an Account</strong></a> &nbsp;·&nbsp;
+  <a href="https://opengates.app"><strong>Opengates Platform</strong></a> &nbsp;·&nbsp;
+  <a href="https://support.opengates.app"><strong>Documentation & Support</strong></a>
+</p>
 
 ---
 
-<img align="right" width="340" src="https://github.com/user-attachments/assets/3cf21e04-7ce9-4d22-a7b9-ba2c595e88a4">
+**Ola Code** is an autonomous AI software engineering agent that operates directly inside your VS Code workspace. Describe a feature, architectural refactor, or bug fix—Ola analyzes your repository, formulates an execution plan, edits multi-file codebases, and executes terminal workflows with human-in-the-loop approval at every step.
 
-### Use any API and Model
+Zero API keys or complex cloud provider setups required. Sign in with your Opengates account and start shipping immediately.
 
-Cline supports API providers like OpenRouter, Anthropic, OpenAI, Google Gemini, AWS Bedrock, Azure, GCP Vertex, Cerebras and Groq. You can also configure any OpenAI compatible API, or use a local model through LM Studio/Ollama. If you're using OpenRouter, the extension fetches their latest model list, allowing you to use the newest models as soon as they're available.
+> **Public Preview:** Welcome to the initial release of Ola Code. Share feedback, report issues, or request features at [support.opengates.app](https://support.opengates.app).
 
-The extension also keeps track of total tokens and API usage cost for the entire task loop and individual requests, keeping you informed of spend every step of the way.
+<!-- Replace with absolute HTTPS URL before running vsce package, e.g., https://raw.githubusercontent.com/Open-Gates-Tech/ola-code/main/assets/demo.gif -->
+<!-- ![Ola Code Workflow Demo](https://raw.githubusercontent.com/Open-Gates-Tech/ola-code/main/assets/demo.gif) -->
 
-<!-- Transparent pixel to create line break after floating image -->
+---
 
-<img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
+## Quick Start
 
-<img align="left" width="370" src="https://github.com/user-attachments/assets/81be79a8-1fdb-4028-9129-5fe055e01e76">
+1. **Install:** Install **Ola Code** from the VS Code Marketplace and click the **Ola** icon in the Activity Bar.
+2. **Authenticate:** Click **Sign In with Opengates** to complete OAuth sign-in in your browser. *(New to Opengates? [Create a free account](https://www.opengates.app/signup)).*
+3. **Build:** Enter a prompt in the chat panel—for example, *"Add Zod input validation to the authentication routes and write unit tests"*—and press **Enter**.
 
-### Run Commands in Terminal
+---
 
-Cline can execute commands and receive their output to install packages, run build scripts, deploy applications, manage databases, and run tests, all while adapting to your dev environment & toolchain to get the job done right.
+## Core Workflows
 
-By default, commands run in a visible VS Code terminal, using the [shell integration API introduced in VSCode v1.93](https://code.visualstudio.com/updates/v1_93#_terminal-shell-integration-api) to stream output as commands run and let you watch or interact with them directly. You can switch to running commands in a background process instead (Settings → Terminal → Terminal Execution Mode).
+### Three Execution Modes
+Switch modes dynamically in the chat input bar to match the complexity of your task:
 
-<!-- Transparent pixel to create line break after floating image -->
+| Mode | Best For | How Ola Operates |
+| :--- | :--- | :--- |
+| **Agent** | End-to-end feature builds, bug fixes, test generation | Autonomously explores the codebase, edits files, and runs commands with your approval. |
+| **Plan** | Multi-file refactors, system architecture, complex migrations | Investigates your workspace and drafts a step-by-step technical spec before touching any code. |
+| **Interactive** | Pair programming, unfamiliar codebases, guided debugging | Asks clarifying questions first, aligns on the approach, and waits for confirmation at each step. |
 
-<img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
+### Dual-Tier Intelligence: Fast vs. Thinking
+Toggle effortlessly between compute profiles directly from the model picker (your selection persists per workspace):
+* **Fast (`ola-code-fast`):** Optimized for sub-second latency, inline edits, boilerplate generation, syntax fixes, and rapid Q&A.
+* **Thinking (`ola-code-reason`):** Powered by deep-reasoning models for complex system architecture, tricky race conditions, and multi-file refactoring.
 
-<img align="right" width="400" src="https://github.com/user-attachments/assets/c5977833-d9b8-491e-90f9-05f9cd38c588">
+---
 
-### Create and Edit Files
+## Key Capabilities
 
-Cline can create and edit files directly in your editor, presenting you a diff view of the changes. You can edit or revert Cline's changes directly in the diff view editor, or provide feedback in chat until you're satisfied with the result. Cline also monitors linter/compiler errors (missing imports, syntax errors, etc.) so he can fix issues that come up along the way on his own.
+### Human-in-the-Loop Control
+* **Interactive Diff Review:** Every proposed file modification opens in a native VS Code diff view. Accept, modify, or reject changes line by line before saving to disk.
+* **Change Summary & Checkpoints:** Review a live summary above the chat box (`N files changed` with `+additions` and `-deletions`). Need to roll back? Edit any earlier message to restore your workspace to that exact checkpoint.
+* **Sandboxed Terminal Approval:** Commands execute after explicit confirmation, with configurable auto-approve rules for trusted read-only or test commands.
 
-All changes made by Cline are recorded in your file's Timeline, providing an easy way to track and revert modifications if needed.
+### Precision Context Injection
+* **`@` Mentions:** Reference specific files, directories, compiler diagnostics (`@problems`), or live documentation URLs directly in your prompt.
+* **Smart Active Context:** Ola automatically surfaces your currently active editor file and highlighted line ranges as one-click context chips.
+* **Native Editor Actions:** Right-click any code selection to **Add to Ola**, or trigger the VS Code Quick Fix lightbulb (`Ctrl+.` / `Cmd+.`) to **Explain**, **Improve**, or **Fix with Ola**.
 
-<!-- Transparent pixel to create line break after floating image -->
+### Developer Ecosystem & Extensibility
+* **Parallel Sub-Agents:** For larger tasks, Ola can delegate focused subtasks (e.g., researching separate modules) to helper sub-agents that run in parallel. Approve each delegation, track live progress in the chat, and let Ola merge the results.
+* **Model Context Protocol (MCP):** Connect Ola to external databases, internal APIs, issue trackers, and custom tooling via standard MCP servers.
+* **Parallel Git Worktrees:** Spin up isolated Git worktrees to run background agent tasks without dirtying your active working branch.
+* **Automated Commit Messages:** Generate conventional commit messages directly from staged diffs in the VS Code Source Control panel.
+* **Local Workspace History:** Search, bookmark, filter by project, and resume past engineering sessions seamlessly.
 
-<img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
+---
 
-<img align="left" width="370" src="https://github.com/user-attachments/assets/bc2e85ba-dfeb-4fe6-9942-7cfc4703cbe5">
+## Plans & Fair-Share Quotas
 
-### Use the Browser
+Ola Code is built on Opengates' mission to democratize access to world-class software engineering tools—offering transparent token pools and localized payment options (including Mobile Money / M-Pesa and cards via Paystack) without restrictive hourly lockouts.
 
-With Claude Sonnet's new [Computer Use](https://www.anthropic.com/news/3-5-models-and-computer-use) capability, Cline can launch a browser, click elements, type text, and scroll, capturing screenshots and console logs at each step. This allows for interactive debugging, end-to-end testing, and even general web use! This gives him autonomy to fixing visual bugs and runtime issues without you needing to handhold and copy-pasting error logs yourself.
+| Tier | Monthly Fast Tokens | Monthly Thinking Tokens | Web Searches | Ideal For |
+| :--- | :--- | :--- | :--- | :--- |
+| **Free Community** | 500,000 | 250,000 | 5 / day | Students, learners, and open-source exploration |
+| **Builder / Pro** | 10,000,000 | 1,500,000 | 20 / day | Professional freelancers, full-stack developers, and startup builders |
+| **Ultra** | 30,000,000 | 5,000,000 | 50 / day | Heavy agentic workflows, engineering teams, and high-velocity shipping |
 
-Try asking Cline to "test the app", and watch as he runs a command like `npm run dev`, launches your locally running dev server in a browser, and performs a series of tests to confirm that everything works. [See a demo here.](https://x.com/sdrzn/status/1850880547825823989)
+---
 
-<!-- Transparent pixel to create line break after floating image -->
+## Privacy, Security & Data Governance
 
-<img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
+* **OAuth 2.0 + PKCE Authentication:** Credentials are exchanged via RFC 7636 PKCE and stored exclusively inside VS Code's OS-level encrypted keychain (`SecretStorage`). Access tokens are never written to workspace files or exposed in logs.
+* **Scoped Context Transmission:** Ola only transmits the explicit prompts, file excerpts, and diagnostics required to fulfill your active request over TLS.
+* **Local-First Session Storage:** Conversation history and workspace checkpoints reside locally on your machine.
+* **Sensitive File Guardrails:** Dotfiles and secret artifacts (`.env*`, `*.pem`, `*.key`, credentials) are excluded from automatic context suggestions by default.
 
-<img align="right" width="350" src="https://github.com/user-attachments/assets/ac0efa14-5c1f-4c26-a42d-9d7c56f5fadd">
+---
 
-### "add a tool that..."
+## System Requirements
 
-Thanks to the [Model Context Protocol](https://github.com/modelcontextprotocol), Cline can extend his capabilities through custom tools. While you can use [community-made servers](https://github.com/modelcontextprotocol/servers), Cline can instead create and install tools tailored to your specific workflow. Just ask Cline to "add a tool" and he will handle everything, from creating a new MCP server to installing it into the extension. These custom tools then become part of Cline's toolkit, ready to use in future tasks.
+* **Editor:** Visual Studio Code `v1.101.0` or newer (or compatible VSCodium / Insiders builds).
+* **Account:** An active [Opengates account](https://www.opengates.app/signup).
 
--   "add a tool that fetches Jira tickets": Retrieve ticket ACs and put Cline to work
--   "add a tool that manages AWS EC2s": Check server metrics and scale instances up or down
--   "add a tool that pulls the latest PagerDuty incidents": Fetch details and ask Cline to fix bugs
+---
 
-<!-- Transparent pixel to create line break after floating image -->
+## Support & Community
 
-<img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
+* **Help Center & Bug Reports:** [support.opengates.app](https://support.opengates.app)
+* **Platform & Account Management:** [www.opengates.app](https://www.opengates.app)
 
-<img align="left" width="360" src="https://github.com/user-attachments/assets/7fdf41e6-281a-4b4b-ac19-020b838b6970">
-
-### Add Context
-
-**`@url`:** Paste in a URL for the extension to fetch and convert to markdown, useful when you want to give Cline the latest docs
-
-**`@problems`:** Add workspace errors and warnings ('Problems' panel) for Cline to fix
-
-**`@file`:** Adds a file's contents so you don't have to waste API requests approving read file (+ type to search files)
-
-**`@folder`:** Adds folder's files all at once to speed up your workflow even more
-
-<!-- Transparent pixel to create line break after floating image -->
-
-<img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
-
-<img align="right" width="350" src="https://github.com/user-attachments/assets/140c8606-d3bf-41b9-9a1f-4dbf0d4c90cb">
-
-### Checkpoints: Compare and Restore
-
-As Cline works through a task, the extension takes a snapshot of your workspace at each step. You can use the 'Compare' button to see a diff between the snapshot and your current workspace, and the 'Restore' button to roll back to that point.
-
-For example, when working with a local web server, you can use 'Restore Workspace Only' to quickly test different versions of your app, then use 'Restore Task and Workspace' when you find the version you want to continue building from. This lets you safely explore different approaches without losing progress.
-
-<!-- Transparent pixel to create line break after floating image -->
-
-<img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
-
-## Contributing
-
-To contribute to the project, start with our [Contributing Guide](../../CONTRIBUTING.md) to learn the basics. You can also join our [Discord](https://discord.gg/cline) to chat with other contributors in the `#contributors` channel. If you're looking for full-time work, check out our open positions on our [careers page](https://cline.bot/join-us)!
-
-## Enterprise
-
-Get the same Cline experience with enterprise-grade controls: SSO (SAML/OIDC), global policies and configuration, observability with audit trails, private networking (VPC/private link), and self-hosted or on-prem deployments, and enterprise support. Learn more at our [enterprise page](https://cline.bot/enterprise) or [talk to us](https://cline.bot/contact-sales).
-
+---
 
 ## License
 
-[Apache 2.0 © 2026 Cline Bot Inc.](./LICENSE)
+Copyright © 2026 Opengates Link Limited (a Theta company).  
+Released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). Built upon the open-source [Cline](https://github.com/cline/cline) foundation.

@@ -8,6 +8,14 @@ option go_package = "github.com/cline/grpc-go/cline";
 option java_multiple_files = true;
 option java_package = "bot.cline.proto";
 
+message ActiveEditorContext {
+  string context_id = 1;
+  string file_name = 2;
+  string language_id = 3;
+  optional int32 start_line = 4;
+  optional int32 end_line = 5;
+}
+
 // Enum for ClineMessage type
 enum ClineMessageType {
   ASK = 0;
@@ -263,6 +271,8 @@ service UiService {
 
   // Subscribe to addToInput events (when user adds content via context menu)
   rpc subscribeToAddToInput(EmptyRequest) returns (stream String);
+  rpc subscribeToActiveEditorContext(EmptyRequest) returns (stream ActiveEditorContext);
+  rpc getActiveEditorAttachment(StringRequest) returns (String);
 
   // Subscribe to MCP button clicked events
   rpc subscribeToMcpButtonClicked(EmptyRequest) returns (stream Empty);
@@ -290,7 +300,6 @@ service UiService {
 
   // Initialize webview when it launches
   rpc initializeWebview(EmptyRequest) returns (Empty);
-
 
   // Subscribe to show webview events
   rpc subscribeToShowWebview(EmptyRequest) returns (stream ShowWebviewEvent);

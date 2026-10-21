@@ -165,6 +165,62 @@ describe("checkpoint workspace comparison", () => {
 		});
 	});
 
+	it("compares correctly when the session runs in a repository subfolder", async () => {
+		// Untracked files existing at snapshot time must be found in the
+		// checkpoint even though `ls-files` lists them relative to the subfolder.
+		const sub = join(dir, "packages", "app");
+		mkdirSync(sub, { recursive: true });
+		writeFileSync(join(sub, "pre-existing.txt"), "untouched\n", "utf8");
+
+		const indexFile = join(dir, ".git", "checkpoint-sub-index");
+		const gitWithIndex = (args: string[]) =>
+			execFileSync("git", ["-C", dir, ...args], {
+				encoding: "utf8",
+				stdio: ["ignore", "pipe", "pipe"],
+				env: { ...process.env, GIT_INDEX_FILE: indexFile },
+			}).trim();
+		gitWithIndex(["add", "--force", "packages/app/pre-existing.txt"]);
+		const untrackedParent = git(dir, [
+			"commit-tree",
+			gitWithIndex(["write-tree"]),
+			"-m",
+			"untracked files on cline checkpoint",
+		]);
+		const indexParent = git(dir, [
+			"commit-tree",
+			`${checkpointRef}^{tree}`,
+			"-p",
+			checkpointRef,
+			"-m",
+			"index on cline checkpoint",
+		]);
+		const snapshotRef = git(dir, [
+			"commit-tree",
+			`${checkpointRef}^{tree}`,
+			"-p",
+			checkpointRef,
+			"-p",
+			indexParent,
+			"-p",
+			untrackedParent,
+			"-m",
+			"cline checkpoint test",
+		]);
+
+		writeFileSync(join(sub, "added-later.txt"), "new\n", "utf8");
+
+		const diffs = await buildCheckpointWorkspaceDiff(sub, {
+			ref: snapshotRef,
+			createdAt: Date.now(),
+			runCount: 1,
+			kind: "stash",
+		});
+
+		expect(diffs.map((diff) => diff.filePath)).toEqual([
+			join(sub, "added-later.txt"),
+		]);
+	});
+
 	it("selects the nearest checkpoint at or before the requested run", async () => {
 		const session = {
 			sessionId: "session-1",

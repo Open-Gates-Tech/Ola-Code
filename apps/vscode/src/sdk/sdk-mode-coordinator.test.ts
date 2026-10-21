@@ -39,6 +39,49 @@ describe("SdkModeCoordinator", () => {
 		expect(options.postStateToWebview).not.toHaveBeenCalled()
 	})
 
+	describe("Ola Interactive", () => {
+		it("does nothing when Agent is already Interactive", async () => {
+			const { coordinator, options } = makeCoordinator({ mode: "act", olaInteractive: true })
+
+			await expect(coordinator.togglePlanActMode("act", undefined, true)).resolves.toBe(false)
+
+			expect(options.stateManager.setGlobalState).not.toHaveBeenCalled()
+		})
+
+		it("rebuilds the active Agent session when switching to Interactive, without a mode notice", async () => {
+			const activeSession = makeActiveSession()
+			const { coordinator, options, state } = makeCoordinator({ mode: "act", activeSession, task: makeTask("old-session") })
+
+			await expect(coordinator.togglePlanActMode("act", undefined, true)).resolves.toBe(false)
+
+			expect(state.mode).toBe("act")
+			expect(state.olaInteractive).toBe(true)
+			expect(options.sessions.replaceActiveSession).toHaveBeenCalledOnce()
+			expect(options.sessions.fireAndForgetSend).not.toHaveBeenCalled()
+			expect(coordinator.consumeModeSwitchNotice("new-session")).toBeNull()
+		})
+
+		it("rolls Interactive back with the mode when the rebuild is refused", async () => {
+			const activeSession = makeActiveSession()
+			const { coordinator, options, state } = makeCoordinator({ mode: "act", activeSession, task: makeTask("old-session") })
+			options.sessions.replaceActiveSession.mockResolvedValueOnce(undefined)
+
+			await coordinator.togglePlanActMode("act", undefined, true)
+
+			expect(state.olaInteractive).toBe(false)
+		})
+
+		it("keeps the Interactive preference when switching to Plan, and clears it when choosing Agent", async () => {
+			const { coordinator, state } = makeCoordinator({ mode: "act", olaInteractive: true })
+
+			await coordinator.togglePlanActMode("plan")
+			expect(state).toMatchObject({ mode: "plan", olaInteractive: true })
+
+			await coordinator.togglePlanActMode("act", undefined, false)
+			expect(state).toMatchObject({ mode: "act", olaInteractive: false })
+		})
+	})
+
 	it("rebuilds an active session for the new mode while preserving the session id", async () => {
 		const activeSession = makeActiveSession()
 		const task = makeTask("old-session")
@@ -775,7 +818,7 @@ describe("SdkModeCoordinator", () => {
 })
 
 function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
-	const state = { mode: input.mode ?? "plan" }
+	const state: Record<string, unknown> = { mode: input.mode ?? "plan", olaInteractive: input.olaInteractive ?? false }
 	const activeSession = input.activeSession
 	const config = {
 		providerId: "anthropic",
@@ -785,9 +828,9 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 	}
 	const options = {
 		stateManager: {
-			getGlobalSettingsKey: vi.fn((key: string) => state[key as "mode"]),
-			setGlobalState: vi.fn(async (key: string, value: string) => {
-				state[key as "mode"] = value as "act" | "plan"
+			getGlobalSettingsKey: vi.fn((key: string) => state[key]),
+			setGlobalState: vi.fn(async (key: string, value: unknown) => {
+				state[key] = value
 			}),
 		} as unknown as StateManager,
 		sessions: {
@@ -872,6 +915,7 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 
 interface MakeCoordinatorInput {
 	mode: "act" | "plan"
+	olaInteractive: boolean
 	activeSession: ReturnType<typeof makeActiveSession>
 	config: {
 		providerId: string

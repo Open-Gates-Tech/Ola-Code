@@ -82,13 +82,13 @@ describe("resolveDataDir", () => {
 		}
 	})
 
-	it("falls back to ~/.cline/data", () => {
+	it("falls back to Ola's isolated data directory", () => {
 		const originalData = process.env.CLINE_DATA_DIR
 		const originalDir = process.env.CLINE_DIR
 		delete process.env.CLINE_DATA_DIR
 		delete process.env.CLINE_DIR
 		try {
-			expect(resolveDataDir()).toBe(path.join(os.homedir(), ".cline", "data"))
+			expect(resolveDataDir()).toBe(path.join(os.homedir(), ".ola-code", "data"))
 		} finally {
 			process.env.CLINE_DATA_DIR = originalData
 			process.env.CLINE_DIR = originalDir

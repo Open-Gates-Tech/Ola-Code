@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useClickAway } from "react-use"
+import { useAssistantName } from "@/hooks/useAssistantName"
 import { useAutoApproveActions } from "@/hooks/useAutoApproveActions"
 import { getAsVar, VSC_TITLEBAR_INACTIVE_FOREGROUND } from "@/utils/vscStyles"
 import AutoApproveMenuItem from "./AutoApproveMenuItem"
@@ -23,6 +24,7 @@ const AutoApproveModal: React.FC<AutoApproveModalProps> = ({
 	cloudAutoApprove = false,
 }) => {
 	const { isChecked, updateAction } = useAutoApproveActions()
+	const assistantName = useAssistantName()
 	const displayedIsChecked = cloudAutoApprove ? () => true : isChecked
 	const modalRef = useRef<HTMLDivElement>(null)
 	const itemsContainerRef = useRef<HTMLDivElement>(null)
@@ -78,7 +80,7 @@ const AutoApproveModal: React.FC<AutoApproveModalProps> = ({
 				<div className="mb-2.5 text-muted-foreground text-xs cursor-pointer" onClick={() => setIsVisible(false)}>
 					{cloudAutoApprove
 						? "Cloud sessions always auto-approve these actions. Your local settings are unchanged. "
-						: "Let Cline take these actions without asking for approval. "}
+						: `Let ${assistantName} take these actions without asking for approval. `}
 					<a
 						className="text-link hover:text-link-hover"
 						href="https://docs.cline.bot/features/auto-approve#auto-approve"

@@ -110,9 +110,12 @@ export class SdkModeCoordinator {
 		this.modeSwitchNoticeTracker.record(from, to)
 	}
 
-	async togglePlanActMode(modeToSwitchTo: Mode, chatContent?: ChatContent): Promise<boolean> {
+	async togglePlanActMode(modeToSwitchTo: Mode, chatContent?: ChatContent, interactive?: boolean): Promise<boolean> {
 		const currentMode = this.options.stateManager.getGlobalSettingsKey("mode")
-		if (currentMode === modeToSwitchTo) {
+		const currentInteractive = this.options.stateManager.getGlobalSettingsKey("olaInteractive") === true
+		const nextInteractive = modeToSwitchTo === "act" && interactive !== undefined ? interactive : currentInteractive
+		const interactiveChanged = modeToSwitchTo === "act" && nextInteractive !== currentInteractive
+		if (currentMode === modeToSwitchTo && !interactiveChanged) {
 			return false
 		}
 
@@ -145,7 +148,7 @@ export class SdkModeCoordinator {
 				(turnPhase === "awaiting_followup" || turnPhase === "completed") &&
 				latestAssistantResult?.say === "plan_completion_result" &&
 				!latestAssistantResult.partial
-			const autoContinue = modeToSwitchTo === "act" && planPresented
+			const autoContinue = modeToSwitchTo === "act" && currentMode === "plan" && planPresented
 			const userPrompt = chatContent?.message?.trim() || undefined
 			const userImages = chatContent?.images?.length ? chatContent.images : undefined
 			const userFiles = chatContent?.files?.length ? chatContent.files : undefined
@@ -155,12 +158,14 @@ export class SdkModeCoordinator {
 				userContinuationPrompt: autoContinue ? userPrompt : undefined,
 				userImages: autoContinue ? userImages : undefined,
 				userFiles: autoContinue ? userFiles : undefined,
+				interactive: nextInteractive,
 			})
 			// True tells the webview the composer content was consumed, so it clears it.
 			return continuationSent && hasUserContent
 		}
 
 		this.options.stateManager.setGlobalState("mode", modeToSwitchTo)
+		this.options.stateManager.setGlobalState("olaInteractive", nextInteractive)
 		await this.options.postStateToWebview()
 		return false
 	}
@@ -177,6 +182,7 @@ export class SdkModeCoordinator {
 			userContinuationPrompt?: string
 			userImages?: string[]
 			userFiles?: string[]
+			interactive?: boolean
 		} = {},
 	): Promise<boolean> {
 		return this.options.rebuilds.runExclusive(() => this.performRebuildSessionForMode(newMode, options))
@@ -189,10 +195,19 @@ export class SdkModeCoordinator {
 			userContinuationPrompt?: string
 			userImages?: string[]
 			userFiles?: string[]
+			interactive?: boolean
 		},
 	): Promise<boolean> {
 		const previousMode = this.options.stateManager.getGlobalSettingsKey("mode")
+		const previousInteractive = this.options.stateManager.getGlobalSettingsKey("olaInteractive") === true
+		const rollback = () => {
+			this.options.stateManager.setGlobalState("mode", previousMode)
+			this.options.stateManager.setGlobalState("olaInteractive", previousInteractive)
+		}
 		this.options.stateManager.setGlobalState("mode", newMode)
+		if (options.interactive !== undefined) {
+			this.options.stateManager.setGlobalState("olaInteractive", options.interactive)
+		}
 
 		const activeSession = this.options.sessions.getActiveSession()
 		if (!activeSession) {
@@ -242,7 +257,7 @@ export class SdkModeCoordinator {
 				)
 				// The session still runs with the old mode's tools, so roll the
 				// setting back to keep the UI toggle coherent with it.
-				this.options.stateManager.setGlobalState("mode", previousMode)
+				rollback()
 				this.options.emitClineAuthError()
 				await this.options.postStateToWebview()
 				return false
@@ -266,7 +281,7 @@ export class SdkModeCoordinator {
 				// session took over (or none is left), the superseding flow owns the
 				// mode now and the setting must not be clobbered.
 				if (this.options.sessions.getActiveSession() === activeSession) {
-					this.options.stateManager.setGlobalState("mode", previousMode)
+					rollback()
 				}
 				await this.options.postStateToWebview()
 				return false
@@ -287,7 +302,9 @@ export class SdkModeCoordinator {
 			// fails earlier rolls the mode setting back, and a notice for a switch
 			// that never took effect would lie to the model. Recording before the
 			// auto-continue send lets that send carry the notice.
-			this.recordModeSwitchNotice(startResult.sessionId, previousMode, newMode)
+			if (previousMode !== newMode) {
+				this.recordModeSwitchNotice(startResult.sessionId, previousMode, newMode)
+			}
 			if (options.autoContinue) {
 				const userPrompt = options.userContinuationPrompt
 				const userImages = options.userImages
@@ -336,7 +353,7 @@ export class SdkModeCoordinator {
 				// The old session is still the active one and still has the old
 				// mode's tools; leaving the setting flipped would show a toggle
 				// that disagrees with what the agent can actually do.
-				this.options.stateManager.setGlobalState("mode", previousMode)
+				rollback()
 			}
 			if (continuationSent) {
 				// The continuation is already running on the rebuilt session; the

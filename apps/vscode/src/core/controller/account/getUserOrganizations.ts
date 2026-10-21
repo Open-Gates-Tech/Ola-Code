@@ -1,5 +1,6 @@
 import { UserOrganization, UserOrganizationsResponse } from "@shared/proto/cline/account"
 import type { EmptyRequest } from "@shared/proto/cline/common"
+import { OpengatesAuthService } from "@/sdk/opengates-auth-service"
 import type { Controller } from "../index"
 
 /**
@@ -9,6 +10,11 @@ import type { Controller } from "../index"
  * @returns User credits data response
  */
 export async function getUserOrganizations(controller: Controller, _request: EmptyRequest): Promise<UserOrganizationsResponse> {
+	const opengates = OpengatesAuthService.get()
+	if (opengates) {
+		await opengates.requireAuthentication()
+		return UserOrganizationsResponse.create({ organizations: [] })
+	}
 	let timer: ReturnType<typeof setTimeout> | undefined
 	try {
 		if (!controller.accountService) {

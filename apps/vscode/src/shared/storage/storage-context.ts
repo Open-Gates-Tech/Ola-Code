@@ -1,8 +1,8 @@
 import fsSync from "node:fs"
-import os from "node:os"
 import path from "node:path"
 import { ClineFileStorage } from "./ClineFileStorage"
 import { ClineMemento } from "./ClineStorage"
+import { resolveProductHomeDir } from "./product-paths"
 
 /**
  * The storage backend context object used by StateManager and other components.
@@ -31,7 +31,7 @@ export interface StorageContext {
 	/** Workspace-scoped state — per-project toggles, rules, etc. */
 	readonly workspaceState: ClineFileStorage
 
-	/** The resolved path to the data directory (~/.cline/data) */
+	/** The resolved path to the product's data directory (~/.ola-code/data for Ola). */
 	readonly dataDir: string
 
 	/** The resolved path to the workspace storage directory (contains workspaceState.json) */
@@ -42,7 +42,7 @@ export interface StorageContextOptions {
 	/**
 	 * Override the Cline home directory. When set, the data directory is always
 	 * `<clineDir>/data`. Defaults to env-based resolution: CLINE_DATA_DIR, then
-	 * CLINE_DIR + "/data", then ~/.cline/data.
+	 * CLINE_DIR + "/data", then the product home + "/data".
 	 */
 	clineDir?: string
 
@@ -81,7 +81,7 @@ function hashString(str: string): string {
 
 /**
  * Resolve the Cline data directory from the environment:
- * CLINE_DATA_DIR (trimmed) > CLINE_DIR + "/data" > ~/.cline/data.
+ * CLINE_DATA_DIR (trimmed) > CLINE_DIR + "/data" > product home + "/data".
  *
  * Single source of truth shared by createStorageContext and the SDK adapter's
  * legacy-state-reader, matching the SDK's own resolveClineDataDir. Every
@@ -95,7 +95,7 @@ export function resolveDataDirFromEnv(): string {
 	if (envDataDir) {
 		return envDataDir
 	}
-	const clineDir = process.env.CLINE_DIR?.trim() || path.join(os.homedir(), ".cline")
+	const clineDir = resolveProductHomeDir()
 	return path.join(clineDir, SETTINGS_SUBFOLDER)
 }
 
@@ -105,7 +105,7 @@ export function resolveDataDirFromEnv(): string {
  * All path computation is contained here — callers should not
  * construct paths to these storage files themselves.
  *
- * File layout (under the resolved data directory, ~/.cline/data by default):
+ * File layout (under the resolved data directory, ~/.ola-code/data for Ola):
  *   <dataDir>/globalState.json    — global state
  *   <dataDir>/secrets.json        — secrets (mode 0o600)
  *   <dataDir>/workspaces/<hash>/workspaceState.json — per-workspace state

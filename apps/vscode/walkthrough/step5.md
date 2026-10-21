@@ -1,7 +1,5 @@
 # No Black Box: Full Visibility & Control
 
-**Cline operates with complete transparency, showing you every file read and every proposed diff.**
+**Ola shows you every file it reads and every change it proposes.**
 
-Understand exactly what Cline is doing and why—no obfuscation. Review all actions and approve changes before they're made. Cline uses checkpoints, allowing you to easily revert if needed, maintaining full control over your codebase. With BYO-key, you also have clear cost transparency.
-
-![Cline Transparency Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-transparency-hifi-5_compress.webp)
+Review Ola's actions and approve file edits and terminal commands before they happen. A summary above the chat box shows how many files changed and how many lines were added or removed; click it to review the diff. Need to undo? Edit an earlier message and restore your workspace to that point.

@@ -57,6 +57,34 @@ service AccountService {
   // Submits a spend limit increase request to the user's org admin.
   // Called when the user hits a SPEND_LIMIT_EXCEEDED (429) error and clicks "Request Increase".
   rpc submitLimitIncreaseRequest(EmptyRequest) returns (SubmitLimitIncreaseResponse);
+
+  // Opengates (Ola Code) plan, allowance, and upgrade details from the Ola gateway.
+  rpc getOpengatesAccount(EmptyRequest) returns (OpengatesAccount);
+
+  // Starts an Opengates Pro checkout and opens it in the browser. Returns the checkout URL.
+  rpc startOpengatesUpgrade(EmptyRequest) returns (String);
+}
+
+message OpengatesProduct {
+  string id = 1;
+  string currency = 2;
+  // Price in the currency's minor unit (e.g. cents).
+  int64 amount = 3;
+  int32 days = 4;
+}
+
+message OpengatesAccount {
+  string tier = 1;
+  string status = 2;
+  int64 credits_remaining = 3;
+  int64 fast_remaining = 4;
+  int64 reason_remaining = 5;
+  // Period allowance for the tier; -1 means unlimited.
+  int64 fast_allowance = 6;
+  int64 reason_allowance = 7;
+  optional string reset_at = 8;
+  optional string expires_at = 9;
+  optional OpengatesProduct upgrade_product = 10;
 }
 
 message AuthStateChangedRequest {

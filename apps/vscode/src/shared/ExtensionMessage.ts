@@ -39,6 +39,7 @@ export const DEFAULT_PLATFORM = "unknown"
 export const COMMAND_CANCEL_TOKEN = "__cline_command_cancel__"
 
 export interface ExtensionState {
+	opengatesAuthEnabled?: boolean
 	isNewUser: boolean
 	welcomeViewCompleted: boolean
 	onboardingModels: OnboardingModelGroup | undefined
@@ -48,6 +49,8 @@ export interface ExtensionState {
 	remoteBrowserHost?: string
 	preferredLanguage?: string
 	mode: Mode
+	/** Ola Interactive: Act mode that clarifies and confirms its approach before working. */
+	olaInteractive?: boolean
 	clineMessages: ClineMessage[]
 	checkpointRestoreInput?: {
 		text: string

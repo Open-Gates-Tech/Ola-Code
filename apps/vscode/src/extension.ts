@@ -3,6 +3,7 @@
 
 import assert from "node:assert"
 import { disableCurrentDirectoryExecutableSearch } from "@cline/shared"
+import { setClineDir } from "@cline/shared/storage"
 import * as vscode from "vscode"
 import { Logger } from "@/shared/services/Logger"
 import { sendAccountButtonClickedEvent } from "./core/controller/ui/subscribeToAccountButtonClicked"
@@ -19,6 +20,7 @@ import path from "node:path"
 import type { ExtensionContext } from "vscode"
 import { HostProvider } from "@/hosts/host-provider"
 import { vscodeHostBridgeClient } from "@/hosts/vscode/hostbridge/client/host-grpc-client"
+import { resolveProductHomeDir } from "@/shared/storage/product-paths"
 import { createStorageContext } from "@/shared/storage/storage-context"
 import { readTextFromClipboard, writeTextToClipboard } from "@/utils/env"
 import { initialize, tearDown } from "./common"
@@ -26,6 +28,7 @@ import { addToCline } from "./core/controller/commands/addToCline"
 import { explainWithCline } from "./core/controller/commands/explainWithCline"
 import { fixWithCline } from "./core/controller/commands/fixWithCline"
 import { improveWithCline } from "./core/controller/commands/improveWithCline"
+import { publishActiveEditorContext } from "./core/controller/ui/subscribeToActiveEditorContext"
 import { sendAddToInputEvent } from "./core/controller/ui/subscribeToAddToInput"
 import { sendShowWebviewEvent } from "./core/controller/ui/subscribeToShowWebview"
 import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
@@ -42,6 +45,7 @@ import { workspaceResolver } from "./core/workspace"
 import { findMatchingNotebookCell, getContextForCommand, showWebview } from "./hosts/vscode/commandUtils"
 import { abortCommitGeneration, generateCommitMsg } from "./hosts/vscode/commit-message-generator"
 import { registerClineOutputChannel } from "./hosts/vscode/hostbridge/env/debugLog"
+import { getActiveEditor } from "./hosts/vscode/hostbridge/window/getActiveEditor"
 import {
 	disposeVscodeCommentReviewController,
 	getVscodeCommentReviewController,
@@ -52,9 +56,11 @@ import { VscodeWebviewProvider } from "./hosts/vscode/VscodeWebviewProvider"
 import { exportVSCodeStorageToSharedFiles } from "./hosts/vscode/vscode-to-file-migration"
 import { ExtensionRegistryInfo } from "./registry"
 import { AuthService, LogoutReason } from "./sdk/auth-service"
+import { OPENGATES_CALLBACK_PATH, OPENGATES_SESSION_KEY, OpengatesAuthService } from "./sdk/opengates-auth-service"
 import { telemetryService } from "./services/telemetry"
 import type { RolloutBundleActivation } from "./services/telemetry/rollout-metadata"
 import { LG_TASK_URI_PATH, SharedUriHandler, TASK_URI_PATH } from "./services/uri/SharedUriHandler"
+import { fetch } from "./shared/net"
 import { ShowMessageType } from "./shared/proto/host/window"
 import { fileExistsAtPath } from "./utils/fs"
 
@@ -70,10 +76,49 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Before anything spawns with the workspace as cwd (rg, git, hooks, MCP).
 	disableCurrentDirectoryExecutableSearch()
+	// This SDK module is bundled per extension; don't mutate process.env, which Cline also reads.
+	setClineDir(resolveProductHomeDir())
 
 	// 1. Set up HostProvider for VSCode
 	// IMPORTANT: This must be done before any service can be registered
 	setupHostProvider(context)
+	const updateEditorContext = () => {
+		void getActiveEditor({})
+			.then(publishActiveEditorContext)
+			.catch((error) => Logger.error("Could not read active editor context", error))
+	}
+	context.subscriptions.push(
+		vscode.window.onDidChangeActiveTextEditor(updateEditorContext),
+		vscode.window.onDidChangeTextEditorSelection((event) => {
+			if (event.textEditor === vscode.window.activeTextEditor) updateEditorContext()
+		}),
+		vscode.workspace.onDidChangeTextDocument((event) => {
+			if (event.document === vscode.window.activeTextEditor?.document) updateEditorContext()
+		}),
+	)
+	updateEditorContext()
+	const callbackUri = vscode.Uri.parse(`${vscode.env.uriScheme}://${context.extension.id}${OPENGATES_CALLBACK_PATH}`)
+	const opengatesAuth = OpengatesAuthService.initialize({
+		secrets: context.secrets,
+		callbackUri: callbackUri.toString(),
+		getRedirectUri: async () => (await vscode.env.asExternalUri(callbackUri)).toString(),
+		openUrl: async (url) => vscode.env.openExternal(vscode.Uri.parse(url)),
+		fetch,
+		reportError: (message) => {
+			Logger.error(message)
+			void vscode.window.showErrorMessage(message)
+		},
+	})
+	context.subscriptions.push(
+		context.secrets.onDidChange((event) => {
+			if (event.key === OPENGATES_SESSION_KEY) {
+				void opengatesAuth.synchronize().catch(() => {
+					Logger.error("Could not synchronize Opengates credentials between VS Code windows.")
+					void vscode.window.showErrorMessage("Could not synchronize your Opengates account. Reload the extension.")
+				})
+			}
+		}),
+	)
 
 	// 2. Clean up legacy data patterns within VSCode's native storage.
 	// Moves workspace→global keys, task history→file, custom instructions→rules, etc.
@@ -81,7 +126,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	await cleanupLegacyVSCodeStorage(context)
 
 	// 3. One-time export of VSCode's native storage to shared file-backed stores.
-	// After this, all platforms (VSCode, CLI, JetBrains) read from ~/.cline/data/.
+	// Ola uses its own data home; never migrate another extension's shared files.
 	const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
 	const storageContext = createStorageContext({ workspacePath })
 	await exportVSCodeStorageToSharedFiles(context, storageContext)
@@ -158,7 +203,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	)
 
 	const handleUri = async (uri: vscode.Uri) => {
-		const url = decodeURIComponent(uri.toString())
+		// Uri.toString() percent-encodes "=" and "&" in the query, which would hide code/state from URL parsing.
+		const url = uri.path === OPENGATES_CALLBACK_PATH ? uri.toString(true) : decodeURIComponent(uri.toString())
 		const uriPath = getUriPath(url)
 		const isTaskUri = uriPath === TASK_URI_PATH || uriPath === LG_TASK_URI_PATH
 
@@ -175,7 +221,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 
 		if (!success) {
-			Logger.warn("Extension URI handler: Failed to process URI:", uri.toString())
+			Logger.warn("Extension URI handler: Failed to process URI:", uri.path)
 		}
 	}
 	context.subscriptions.push(vscode.window.registerUriHandler({ handleUri }))
@@ -191,7 +237,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Register size testing commands in development mode
 	if (IS_DEV) {
-		vscode.commands.executeCommand("setContext", "cline.isDevMode", IS_DEV)
+		vscode.commands.executeCommand("setContext", ExtensionRegistryInfo.contextKeys.isDevMode, IS_DEV)
 		// Use dynamic import to avoid loading the module in production
 		import("./dev/commands/tasks")
 			.then((module) => {
@@ -265,38 +311,43 @@ export async function activate(context: vscode.ExtensionContext) {
 					// range (selection, expanded around the cursor when empty) and intersecting
 					// diagnostics themselves via getContextForCommand.
 					const actions: vscode.CodeAction[] = []
+					const assistantName = OpengatesAuthService.get() ? "Ola" : "Cline"
 
-					// Add to Cline (Always available)
-					const addAction = new vscode.CodeAction("Add to Cline", vscode.CodeActionKind.QuickFix)
+					// Add to chat (Always available)
+					const addTitle = `Add to ${assistantName}`
+					const addAction = new vscode.CodeAction(addTitle, vscode.CodeActionKind.QuickFix)
 					addAction.command = {
 						command: commands.AddToChat,
-						title: "Add to Cline",
+						title: addTitle,
 					}
 					actions.push(addAction)
 
-					// Explain with Cline (Always available)
-					const explainAction = new vscode.CodeAction("Explain with Cline", vscode.CodeActionKind.RefactorExtract) // Using a refactor kind
+					// Explain (Always available)
+					const explainTitle = `Explain with ${assistantName}`
+					const explainAction = new vscode.CodeAction(explainTitle, vscode.CodeActionKind.RefactorExtract) // Using a refactor kind
 					explainAction.command = {
 						command: commands.ExplainCode,
-						title: "Explain with Cline",
+						title: explainTitle,
 					}
 					actions.push(explainAction)
 
-					// Improve with Cline (Always available)
-					const improveAction = new vscode.CodeAction("Improve with Cline", vscode.CodeActionKind.RefactorRewrite) // Using a refactor kind
+					// Improve (Always available)
+					const improveTitle = `Improve with ${assistantName}`
+					const improveAction = new vscode.CodeAction(improveTitle, vscode.CodeActionKind.RefactorRewrite) // Using a refactor kind
 					improveAction.command = {
 						command: commands.ImproveCode,
-						title: "Improve with Cline",
+						title: improveTitle,
 					}
 					actions.push(improveAction)
 
-					// Fix with Cline (Only if diagnostics exist)
+					// Fix (Only if diagnostics exist)
 					if (context.diagnostics.length > 0) {
-						const fixAction = new vscode.CodeAction("Fix with Cline", vscode.CodeActionKind.QuickFix)
+						const fixTitle = `Fix with ${assistantName}`
+						const fixAction = new vscode.CodeAction(fixTitle, vscode.CodeActionKind.QuickFix)
 						fixAction.isPreferred = true
 						fixAction.command = {
 							command: commands.FixWithCline,
-							title: "Fix with Cline",
+							title: fixTitle,
 						}
 						actions.push(fixAction)
 					}
@@ -477,7 +528,10 @@ ${ctx.cellJson || "{}"}
 	// Register the openWalkthrough command handler
 	context.subscriptions.push(
 		vscode.commands.registerCommand(commands.Walkthrough, async () => {
-			await vscode.commands.executeCommand("workbench.action.openWalkthrough", `${context.extension.id}#ClineWalkthrough`)
+			await vscode.commands.executeCommand(
+				"workbench.action.openWalkthrough",
+				`${context.extension.id}#${ExtensionRegistryInfo.walkthroughId}`,
+			)
 			telemetryService.captureButtonClick("command_openWalkthrough")
 		}),
 	)

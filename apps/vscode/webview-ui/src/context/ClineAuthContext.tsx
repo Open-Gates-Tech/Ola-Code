@@ -4,6 +4,7 @@ import deepEqual from "fast-deep-equal"
 import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { AccountServiceClient } from "@/services/grpc-client"
+import { useExtensionState } from "./ExtensionStateContext"
 
 // Define User type (you may need to adjust this based on your actual User type)
 export interface ClineUser {
@@ -15,6 +16,8 @@ export interface ClineUser {
 }
 
 export interface ClineAuthContextType {
+	isAuthReady: boolean
+	authError: string | null
 	clineUser: ClineUser | null
 	organizations: UserOrganization[] | null
 	activeOrganization: UserOrganization | null
@@ -26,6 +29,9 @@ export interface ClineAuthContextType {
 export const ClineAuthContext = createContext<ClineAuthContextType | undefined>(undefined)
 
 export const ClineAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+	const { opengatesAuthEnabled } = useExtensionState()
+	const [isAuthReady, setIsAuthReady] = useState(false)
+	const [authError, setAuthError] = useState<string | null>(null)
 	const [user, setUser] = useState<ClineUser | null>(null)
 	const [userOrganizations, setUserOrganizations] = useState<UserOrganization[] | null>(null)
 	const organizationsRequestIdRef = useRef(0)
@@ -122,6 +128,8 @@ export const ClineAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 	useEffect(() => {
 		const cancelSubscription = AccountServiceClient.subscribeToAuthStatusUpdate(EmptyRequest.create(), {
 			onResponse: (response: AuthState) => {
+				setIsAuthReady(true)
+				setAuthError(null)
 				const responseUser = response.user
 				if (userIdRef.current !== responseUser?.uid) {
 					userIdRef.current = responseUser?.uid
@@ -146,12 +154,14 @@ export const ClineAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 				// this on uid changes leaves stale `active` flags — which reset the
 				// account view's org dropdown on remount. The deepEqual guard in
 				// getUserOrganizations prevents no-op re-renders.
-				getUserOrganizations()
+				if (!opengatesAuthEnabled) getUserOrganizations()
 
 				setUser((oldUser) => (oldUser?.uid !== responseUser.uid ? responseUser : oldUser))
 			},
 			onError: (error: Error) => {
 				console.error("Error in auth callback subscription:", error)
+				setAuthError("Could not read account status. Reload the extension to reconnect.")
+				setIsAuthReady(true)
 			},
 			onComplete: () => {
 				console.log("Auth callback subscription completed")
@@ -164,11 +174,13 @@ export const ClineAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 			switchRequestRef.current = null
 			cancelSubscription()
 		}
-	}, [getUserOrganizations])
+	}, [getUserOrganizations, opengatesAuthEnabled])
 
 	return (
 		<ClineAuthContext.Provider
 			value={{
+				isAuthReady,
+				authError,
 				clineUser: user,
 				organizations: userOrganizations,
 				activeOrganization,

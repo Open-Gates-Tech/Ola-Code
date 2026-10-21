@@ -1,5 +1,8 @@
+import { PlanActMode } from "@shared/proto/cline/state"
 import { fireEvent, render, screen } from "@testing-library/react"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { StateServiceClient } from "@/services/grpc-client"
 import ChatTextArea from "./ChatTextArea"
 
 const mocks = vi.hoisted(() => ({
@@ -37,6 +40,9 @@ vi.mock("@/hooks/useNormalizedApiConfiguration", () => ({
 }))
 
 vi.mock("@/services/grpc-client", () => ({
+	UiServiceClient: {
+		subscribeToActiveEditorContext: vi.fn(() => vi.fn()),
+	},
 	FileServiceClient: {
 		searchCommits: vi.fn(async () => ({ commits: [] })),
 		searchFiles: vi.fn(async () => ({ results: [] })),
@@ -47,6 +53,9 @@ vi.mock("@/services/grpc-client", () => ({
 	StateServiceClient: {
 		togglePlanActModeProto: vi.fn(async () => ({})),
 	},
+	ModelsServiceClient: {
+		updateApiConfigurationProto: vi.fn(async () => ({})),
+	},
 }))
 
 vi.mock("../cline-rules/ClineRulesToggleModal", () => ({ default: () => null }))
@@ -54,7 +63,10 @@ vi.mock("./ServersToggleModal", () => ({ default: () => null }))
 
 const PNG_DATA_URL = "data:image/png;base64,iVBORw0KGgo="
 
-function renderTextArea(selectedImages: string[] = []) {
+function renderTextArea(
+	selectedImages: string[] = [],
+	extraProps: { stopButton?: ReactNode; composerActions?: ReactNode; inputValue?: string } = {},
+) {
 	const setSelectedImages = vi.fn()
 	render(
 		<ChatTextArea
@@ -70,6 +82,7 @@ function renderTextArea(selectedImages: string[] = []) {
 			setSelectedFiles={vi.fn()}
 			setSelectedImages={setSelectedImages}
 			shouldDisableFilesAndImages={false}
+			{...extraProps}
 		/>,
 	)
 	return { textarea: screen.getByPlaceholderText("Type a message"), setSelectedImages }
@@ -95,6 +108,32 @@ describe("ChatTextArea model label", () => {
 		expect(screen.getByTitle("Open API Settings")).toHaveTextContent("anthropic:text-only-model")
 	})
 
+	it("uses Ola's compact model picker and Agent/Plan without API settings", () => {
+		mocks.cloudState = { opengatesAuthEnabled: true }
+		renderTextArea()
+		expect(screen.getByRole("button", { name: "Model" })).toBeVisible()
+		expect(screen.queryByTitle("Open API Settings")).not.toBeInTheDocument()
+		expect(screen.getByText("Agent")).toBeVisible()
+		expect(screen.getByText("Plan")).toBeVisible()
+	})
+
+	it("puts Ola actions inside the composer card and swaps Send for Stop", () => {
+		mocks.cloudState = { opengatesAuthEnabled: true }
+		renderTextArea([], {
+			composerActions: <button type="button">Retry</button>,
+			stopButton: (
+				<button aria-label="Stop" type="button">
+					stop
+				</button>
+			),
+		})
+		const composer = screen.getByTestId("chat-composer")
+		expect(composer).toHaveClass("ola-composer")
+		expect(composer).toContainElement(screen.getByRole("button", { name: "Retry" }))
+		expect(composer).toContainElement(screen.getByRole("button", { name: "Stop" }))
+		expect(screen.queryByTestId("send-button")).not.toBeInTheDocument()
+	})
+
 	it.each([
 		["a new task targets Cloud", { cloudSessionsEnabled: true, cloudTaskTarget: { target: "cloud" } }],
 		["a cloud task is shown", { currentCloudTask: { sessionId: "ses-1", status: "running" } }],
@@ -102,6 +141,81 @@ describe("ChatTextArea model label", () => {
 		mocks.cloudState = { ...cloudState, cloudModelId: "anthropic/claude-sonnet-4.5" }
 		renderTextArea()
 		expect(screen.getByTitle("Open API Settings")).toHaveTextContent("cline:anthropic/claude-sonnet-4.5")
+	})
+})
+
+describe("ChatTextArea draft height", () => {
+	beforeEach(() => {
+		mocks.supportsImages = true
+		mocks.cloudState = {}
+	})
+
+	it.each([
+		["empty Ola draft", true, "", 78, true],
+		["short Ola draft", true, "Explain this file", 38, false],
+		["multiline Ola draft", true, "First line\nSecond line", 58, false],
+		["long Ola draft", true, Array(12).fill("Another line").join("\n"), 218, false],
+		["non-Ola draft", false, "Explain this file", 78, false],
+	] as const)("sizes an %s without reserving hidden hint space", (_label, ola, inputValue, height, showHint) => {
+		mocks.cloudState = { opengatesAuthEnabled: ola }
+		const scrollHeight = vi.spyOn(HTMLTextAreaElement.prototype, "scrollHeight", "get").mockImplementation(function () {
+			return this.value.split("\n").length * 20 + 18
+		})
+		try {
+			const { textarea } = renderTextArea([], { inputValue })
+			expect(textarea).toHaveStyle({ height: `${height}px` })
+			const hint = screen.queryByText(/Type @ for context/)
+			if (showHint) {
+				expect(hint).toBeInTheDocument()
+			} else {
+				expect(hint).not.toBeInTheDocument()
+			}
+		} finally {
+			scrollHeight.mockRestore()
+		}
+	})
+})
+
+describe("ChatTextArea Ola modes", () => {
+	beforeEach(() => {
+		mocks.cloudState = { opengatesAuthEnabled: true }
+		vi.mocked(StateServiceClient.togglePlanActModeProto).mockClear()
+	})
+
+	it("shows the Opengates attribution below the composer", () => {
+		renderTextArea()
+		const footer = screen.getByTestId("ola-composer-footer")
+		expect(footer).toHaveTextContent("From Opengates, a Theta company")
+		expect(screen.getByTestId("chat-composer").nextElementSibling).toBe(footer)
+	})
+
+	it("offers Interactive, Plan, and Agent in that order", () => {
+		renderTextArea()
+		expect(screen.getAllByRole("radio").map((radio) => radio.textContent)).toEqual(["Interactive", "Plan", "Agent"])
+		expect(screen.getByRole("radio", { name: "Agent" })).toHaveAttribute("aria-checked", "true")
+	})
+
+	it("shows Interactive as selected when Agent runs with Interactive enabled", () => {
+		mocks.cloudState = { opengatesAuthEnabled: true, olaInteractive: true }
+		renderTextArea()
+		expect(screen.getByRole("radio", { name: "Interactive" })).toHaveAttribute("aria-checked", "true")
+	})
+
+	it.each([
+		["Interactive", PlanActMode.ACT, true],
+		["Plan", PlanActMode.PLAN, false],
+	] as const)("requests %s mode", (label, mode, interactive) => {
+		renderTextArea()
+		fireEvent.click(screen.getByRole("radio", { name: label }))
+		expect(StateServiceClient.togglePlanActModeProto).toHaveBeenCalledWith(expect.objectContaining({ mode, interactive }))
+	})
+
+	it("switches with arrow keys", () => {
+		renderTextArea()
+		fireEvent.keyDown(screen.getByRole("radiogroup", { name: "Mode" }), { key: "ArrowRight" })
+		expect(StateServiceClient.togglePlanActModeProto).toHaveBeenCalledWith(
+			expect.objectContaining({ mode: PlanActMode.ACT, interactive: true }),
+		)
 	})
 })
 

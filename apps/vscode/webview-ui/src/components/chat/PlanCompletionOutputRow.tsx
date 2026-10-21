@@ -16,7 +16,7 @@ interface PlanCompletionOutputProps {
  */
 const PlanCompletionOutputRow = memo(({ text }: PlanCompletionOutputProps) => {
 	return (
-		<div className="rounded-sm border border-warning/20 overflow-visible bg-warning/10">
+		<div className="assistant-completion-card rounded-sm border border-warning/20 overflow-visible bg-warning/10">
 			<div className="flex items-center justify-between gap-2 pl-2 pr-1 pt-1 -mb-1.5">
 				<span className="text-xs font-medium uppercase tracking-wider text-warning/70">Plan</span>
 				<CopyButton ariaLabel="Copy plan response" className="text-warning/70" textToCopy={text} />

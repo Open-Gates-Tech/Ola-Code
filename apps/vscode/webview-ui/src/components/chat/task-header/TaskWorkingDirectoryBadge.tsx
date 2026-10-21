@@ -2,6 +2,7 @@ import type { Platform } from "@shared/ExtensionMessage"
 import type { WorkspaceRoot } from "@shared/multi-root/types"
 import { FolderIcon } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useAssistantName } from "@/hooks/useAssistantName"
 
 /**
  * Normalizes a path for comparison only, with platform-aware semantics that
@@ -73,6 +74,7 @@ const TaskWorkingDirectoryBadge: React.FC<{
 	workspaceRoots?: WorkspaceRoot[]
 	platform: Platform
 }> = ({ taskCwd, workspaceRoots, platform }) => {
+	const assistantName = useAssistantName()
 	if (!isTaskCwdOutsideWorkspace(taskCwd, workspaceRoots ?? [], platform)) {
 		return null
 	}
@@ -81,8 +83,8 @@ const TaskWorkingDirectoryBadge: React.FC<{
 	return (
 		<Tooltip>
 			<TooltipContent className="max-w-xs" side="bottom">
-				This task's working directory is {cwd}, which is outside the current workspace. Cline reads and edits files and
-				runs commands there.
+				This task's working directory is {cwd}, which is outside the current workspace. {assistantName} reads and edits
+				files and runs commands there.
 			</TooltipContent>
 			<TooltipTrigger className="flex items-center min-w-0">
 				<div

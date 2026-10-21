@@ -10,6 +10,7 @@ import OrgClinePassRestrictionError from "@/components/chat/OrgClinePassRestrict
 import SpendLimitError from "@/components/chat/SpendLimitError"
 import { Button } from "@/components/ui/button"
 import { useClineAuth, useClineSignIn } from "@/context/ClineAuthContext"
+import { useAssistantName } from "@/hooks/useAssistantName"
 import { ClineError, ClineErrorType, MODEL_NOT_FOUND_GUIDANCE } from "../../../../src/services/error/ClineError"
 
 const _errorColor = "var(--vscode-errorForeground)"
@@ -25,6 +26,7 @@ interface ErrorRowProps {
 const ErrorRow = memo((props: ErrorRowProps) => {
 	const { message, errorType, apiRequestFailedMessage, apiReqStreamingFailedMessage, retryFailedRequest } = props
 	const { clineUser } = useClineAuth()
+	const assistantName = useAssistantName()
 	const rawApiError = apiRequestFailedMessage || apiReqStreamingFailedMessage
 
 	const { isLoginLoading, authStatusMessage, handleSignIn } = useClineSignIn()
@@ -195,7 +197,8 @@ const ErrorRow = memo((props: ErrorRowProps) => {
 				return (
 					<div className="flex flex-col p-2 rounded text-xs opacity-80 bg-quote text-foreground">
 						<div>
-							Cline tried to access <code>{message.text}</code> which is blocked by the <code>.clineignore</code>
+							{assistantName} tried to access <code>{message.text}</code> which is blocked by the{" "}
+							<code>.clineignore</code>
 							file.
 						</div>
 					</div>

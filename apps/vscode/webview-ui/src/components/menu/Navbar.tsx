@@ -1,4 +1,4 @@
-import { HistoryIcon, PlusIcon, PuzzleIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
+import { GitBranchIcon, HistoryIcon, PlusIcon, PuzzleIcon, ServerIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -9,8 +9,16 @@ interface NavbarProps {
 }
 
 export const Navbar = ({ startNewTask }: NavbarProps) => {
-	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMarketplace, navigateToChat } =
-		useExtensionState()
+	const {
+		navigateToHistory,
+		navigateToSettings,
+		navigateToAccount,
+		navigateToMarketplace,
+		navigateToChat,
+		navigateToMcp,
+		navigateToWorktrees,
+		opengatesAuthEnabled,
+	} = useExtensionState()
 
 	const SETTINGS_TABS = useMemo(
 		() => [
@@ -65,7 +73,14 @@ export const Navbar = ({ startNewTask }: NavbarProps) => {
 		<nav
 			className="flex-none inline-flex justify-end bg-transparent gap-2 mb-1 z-10 border-none items-center mr-4!"
 			id="cline-navbar-container">
-			{SETTINGS_TABS.map((tab) => (
+			{(opengatesAuthEnabled
+				? [
+						SETTINGS_TABS[0],
+						{ id: "mcp", tooltip: "MCP servers", icon: ServerIcon, navigate: () => navigateToMcp("configure") },
+						{ id: "worktrees", tooltip: "Worktrees", icon: GitBranchIcon, navigate: navigateToWorktrees },
+					]
+				: SETTINGS_TABS
+			).map((tab) => (
 				<Tooltip key={`navbar-tooltip-${tab.id}`}>
 					<TooltipContent side="bottom">{tab.tooltip}</TooltipContent>
 					<TooltipTrigger asChild>

@@ -43,7 +43,7 @@ describe("togglePlanActModeProto", () => {
 
 		await togglePlanActModeProto(mockController, request)
 
-		expect(toggleSpy).toHaveBeenCalledWith("plan", undefined)
+		expect(toggleSpy).toHaveBeenCalledWith("plan", undefined, undefined)
 	})
 
 	it("decodes ACT mode and passes it to the controller", async () => {
@@ -52,7 +52,16 @@ describe("togglePlanActModeProto", () => {
 
 		await togglePlanActModeProto(mockController, request)
 
-		expect(toggleSpy).toHaveBeenCalledWith("act", undefined)
+		expect(toggleSpy).toHaveBeenCalledWith("act", undefined, undefined)
+	})
+
+	it("passes Ola Interactive through to the controller", async () => {
+		toggleSpy.mockResolvedValue(false)
+		await togglePlanActModeProto(
+			mockController,
+			TogglePlanActModeRequest.create({ mode: PlanActMode.ACT, interactive: true }),
+		)
+		expect(toggleSpy).toHaveBeenCalledWith("act", undefined, true)
 	})
 
 	it("passes chatContent through to the controller", async () => {

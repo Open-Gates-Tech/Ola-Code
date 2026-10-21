@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const navigateToSettings = vi.fn()
 let enableCheckpointsSetting: boolean | undefined = true
+let opengatesAuthEnabled = false
 
 vi.mock("@/context/ExtensionStateContext", () => ({
 	__esModule: true,
@@ -19,6 +20,7 @@ vi.mock("@/context/ExtensionStateContext", () => ({
 		dispatch: vi.fn(),
 		navigateToSettings,
 		enableCheckpointsSetting,
+		opengatesAuthEnabled,
 	}),
 }))
 
@@ -38,6 +40,7 @@ describe("UserMessage – IME composition handling", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		enableCheckpointsSetting = true
+		opengatesAuthEnabled = false
 		vi.stubGlobal(
 			"ResizeObserver",
 			class ResizeObserver {
@@ -70,6 +73,15 @@ describe("UserMessage – IME composition handling", () => {
 		fireEvent.compositionEnd(editable)
 
 		expect(sendMessageFromChatRow).not.toHaveBeenCalled()
+	})
+
+	it("renders Ola user messages as right-aligned bubbles", () => {
+		opengatesAuthEnabled = true
+		render(<UserMessage messageTs={123} text="Hello Ola" />)
+
+		const bubble = screen.getByTestId("user-message")
+		expect(bubble).toHaveClass("ola-user-bubble")
+		expect(bubble.style.backgroundColor).toBe("")
 	})
 
 	it("cancels inline editing on Escape without bubbling to global task shortcuts", () => {

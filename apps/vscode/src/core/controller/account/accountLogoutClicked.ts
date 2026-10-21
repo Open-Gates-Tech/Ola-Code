@@ -1,5 +1,6 @@
 import type { EmptyRequest } from "@shared/proto/cline/common"
 import { Empty } from "@shared/proto/cline/common"
+import { OpengatesAuthService } from "@/sdk/opengates-auth-service"
 import type { Controller } from "../index"
 
 /**
@@ -10,6 +11,12 @@ import type { Controller } from "../index"
  * @returns Empty response
  */
 export async function accountLogoutClicked(controller: Controller, _request: EmptyRequest): Promise<Empty> {
+	const opengates = OpengatesAuthService.get()
+	if (opengates) {
+		await opengates.logout()
+		if (controller.task) await controller.cancelTask()
+		return Empty.create({})
+	}
 	await controller.handleSignOut()
 	return Empty.create({})
 }

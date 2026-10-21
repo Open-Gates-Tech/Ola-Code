@@ -21,6 +21,22 @@ describe("ThinkingRow", () => {
 		expect(screen.getByText("Inspecting files...")).toBeInTheDocument()
 	})
 
+	it("renders a leading icon before the title", () => {
+		render(
+			<ThinkingRow
+				icon={<svg data-testid="leading-icon" />}
+				isExpanded={false}
+				isStreaming={true}
+				isVisible={true}
+				showTitle={true}
+				title="Thinking..."
+			/>,
+		)
+
+		const icon = screen.getByTestId("leading-icon")
+		expect(icon.compareDocumentPosition(screen.getByText("Thinking..."))).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+	})
+
 	it("calls onToggle when header is clicked", () => {
 		const onToggle = vi.fn()
 

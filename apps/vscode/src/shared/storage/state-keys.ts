@@ -284,6 +284,7 @@ const USER_SETTINGS_FIELDS = {
 	cloudSessionsEnabled: { default: false as boolean },
 	preferredLanguage: { default: "English" as string },
 	mode: { default: "act" as Mode },
+	olaInteractive: { default: false as boolean },
 	backgroundEditEnabled: { default: false as boolean },
 	optOutOfRemoteConfig: { default: false as boolean },
 	showFeatureTips: { default: false as boolean },

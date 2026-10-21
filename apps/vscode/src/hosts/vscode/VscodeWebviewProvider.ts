@@ -15,8 +15,7 @@ https://github.com/KumarVariable/vscode-extension-sidebar-html/blob/master/src/c
 */
 
 export class VscodeWebviewProvider extends WebviewProvider implements vscode.WebviewViewProvider {
-	// Used in package.json as the view's id. This value cannot be changed due to how vscode caches
-	// views based on their id, and updating the id would break existing instances of the extension.
+	// Must match the product-specific view ID in package.json.
 	public static readonly SIDEBAR_ID = ExtensionRegistryInfo.views.Sidebar
 
 	private webview?: vscode.WebviewView

@@ -7,6 +7,7 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
 	test: {
 		include: [
+			"src/registry.test.ts",
 			"src/sdk/**/*.test.ts",
 			"src/hosts/vscode/VscodeEditPreview.test.ts",
 			"src/shared/vsCodeSelectorUtils.test.ts",

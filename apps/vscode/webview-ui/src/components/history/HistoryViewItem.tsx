@@ -30,6 +30,7 @@ type HistoryViewItemProps = {
 	handleDeleteHistoryItem: (id: string) => void
 	toggleFavorite: (id: string, isCurrentlyFavorited: boolean) => void
 	handleHistorySelect: (itemId: string, checked: boolean) => void
+	compact?: boolean
 }
 
 const HistoryViewItem = ({
@@ -39,8 +40,10 @@ const HistoryViewItem = ({
 	toggleFavorite,
 	handleHistorySelect,
 	selectedItems,
+	compact = false,
 }: HistoryViewItemProps) => {
 	const [expanded, setExpanded] = useState(false)
+	const [actionError, setActionError] = useState<string | null>(null)
 	const isCostVisible = useUsageCostVisibility()
 
 	const isFavoritedItem = useMemo(
@@ -51,9 +54,11 @@ const HistoryViewItem = ({
 	const isCloud = item.executionTarget === "cloud"
 
 	const handleShowTaskWithId = useCallback((id: string) => {
-		TaskServiceClient.showTaskWithId(StringRequest.create({ value: id })).catch((error) =>
-			console.error("Error showing task:", error),
-		)
+		setActionError(null)
+		TaskServiceClient.showTaskWithId(StringRequest.create({ value: id })).catch((error) => {
+			console.error("Error showing task:", error)
+			setActionError("Could not open this conversation. Try again.")
+		})
 	}, [])
 
 	const formatDate = useCallback((timestamp: number) => {
@@ -81,6 +86,90 @@ const HistoryViewItem = ({
 			.replace(", ", " ")
 			.replace(" at", ",")
 	}, [])
+
+	if (compact) {
+		return (
+			<article className="ola-history-card">
+				<div className="flex items-start gap-2">
+					<input
+						aria-label={`Select ${item.task}`}
+						checked={selectedItems.includes(item.id)}
+						className="mt-1 shrink-0"
+						onChange={(event) => handleHistorySelect(item.id, event.target.checked)}
+						type="checkbox"
+					/>
+					<button className="ola-history-open" onClick={() => handleShowTaskWithId(item.id)} type="button">
+						<span className="line-clamp-2 whitespace-pre-wrap break-words ph-no-capture">{item.task}</span>
+						<span className="mt-1 block text-xs text-description">{formatDate(item.ts)}</span>
+					</button>
+					<button
+						aria-label={isFavoritedItem ? "Remove from favorites" : "Add to favorites"}
+						aria-pressed={Boolean(isFavoritedItem)}
+						className="ola-icon-button shrink-0"
+						disabled={isCloud || pendingFavoriteToggles[item.id] !== undefined}
+						onClick={() => toggleFavorite(item.id, Boolean(isFavoritedItem))}
+						type="button">
+						<StarIcon aria-hidden="true" fill={isFavoritedItem ? "currentColor" : "none"} size={14} />
+					</button>
+				</div>
+				<div className="mt-2 flex flex-wrap items-center gap-1">
+					{isCloud && <CloudStatusPill status={item.cloudStatus} />}
+					<button
+						aria-expanded={expanded}
+						className="ola-pill-button"
+						onClick={() => setExpanded(!expanded)}
+						type="button">
+						{expanded ? "Hide details" : "Details"}
+					</button>
+					<button
+						aria-label={`Export ${item.task}`}
+						className="ola-icon-button"
+						onClick={() => {
+							setActionError(null)
+							void TaskServiceClient.exportTaskWithId(StringRequest.create({ value: item.id })).catch((error) => {
+								console.error("Could not export conversation:", error)
+								setActionError("Could not export this conversation. Try again.")
+							})
+						}}
+						type="button">
+						<DownloadIcon aria-hidden="true" size={14} />
+					</button>
+					<button
+						aria-label={`Delete ${item.task}`}
+						className="ola-icon-button ml-auto"
+						disabled={Boolean(isFavoritedItem)}
+						onClick={() => handleDeleteHistoryItem(item.id)}
+						title={isFavoritedItem ? "Remove from favorites before deleting" : "Delete conversation"}
+						type="button">
+						<TrashIcon aria-hidden="true" size={14} />
+					</button>
+				</div>
+				{expanded && (
+					<dl className="ola-account-facts mt-2">
+						{item.modelId && (
+							<div>
+								<dt>Model</dt>
+								<dd className="break-all">{item.modelId}</dd>
+							</div>
+						)}
+						<div>
+							<dt>Tokens</dt>
+							<dd>{formatLargeNumber((item.tokensIn || 0) + (item.tokensOut || 0))}</dd>
+						</div>
+						<div>
+							<dt>Size</dt>
+							<dd>{formatSize(item.size)}</dd>
+						</div>
+					</dl>
+				)}
+				{actionError && (
+					<p className="m-0 mt-2 text-xs text-error" role="alert">
+						{actionError}
+					</p>
+				)}
+			</article>
+		)
+	}
 
 	return (
 		<div className="history-item cursor-pointer flex group mb-1 hover:bg-list-hover border-b border-accent/10" key={item.id}>

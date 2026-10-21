@@ -1,22 +1,26 @@
 {
-	"name": "claude-dev",
-	"displayName": "Cline",
-	"description": "Autonomous coding agent right in your IDE, capable of creating/editing files, running commands, using the browser, and more with your permission every step of the way.",
-	"version": "4.1.25",
+	"name": "ola-code",
+	"displayName": "Ola Code",
+	"description": "Autonomous AI coding agent and multi-agent developer workspace powered by Opengates.",
+	"version": "0.1.1",
+	"preview": true,
 	"icon": "assets/icons/icon.png",
 	"engines": {
 		"vscode": "^1.101.0"
 	},
 	"author": {
-		"name": "Cline Bot Inc."
+		"name": "Opengates"
 	},
 	"license": "Apache-2.0",
-	"publisher": "saoudrizwan",
+	"publisher": "Opengates",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cline/cline"
+		"url": "https://github.com/Open-Gates-Tech/ola-code"
 	},
-	"homepage": "https://cline.bot",
+	"homepage": "https://opengates.app",
+	"bugs": {
+		"url": "https://support.opengates.app"
+	},
 	"categories": [
 		"AI",
 		"Chat",
@@ -26,61 +30,50 @@
 		"Testing"
 	],
 	"keywords": [
-		"cline",
-		"claude",
-		"dev",
-		"mcp",
-		"openrouter",
+		"ola code",
+		"opengates",
 		"coding",
 		"agent",
 		"autonomous",
-		"chatgpt",
-		"sonnet",
-		"ai",
-		"llama"
+		"ai"
 	],
 	"activationEvents": [
-		"onLanguage",
-		"onUri",
-		"onStartupFinished"
+		"onUri"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
 		"icons": {
-			"cline-icon": {
-				"description": "cline",
-				"default": {
-					"fontPath": "assets/icons/cline-bot.woff",
-					"fontCharacter": "\\e900"
-				}
+			"ola-code-icon": {
+				"description": "Ola Code",
+				"default": "sparkle"
 			}
 		},
 		"walkthroughs": [
 			{
-				"id": "ClineWalkthrough",
-				"title": "Meet Cline, your new coding partner",
-				"description": "Cline codes like a developer because it thinks like one. Here are 5 ways to put it to work:",
+				"id": "OlaCodeWalkthrough",
+				"title": "Meet Ola, your new coding partner",
+				"description": "Ola codes like a developer because it thinks like one. Here are 5 ways to put it to work:",
 				"steps": [
 					{
 						"id": "welcome",
 						"title": "Start with a Goal, Not Just a Prompt",
-						"description": "Tell Cline what you want to achieve. It plans, asks, and then codes, like a true partner.",
+						"description": "Tell Ola what you want to achieve. It plans, asks, and then codes, like a true partner.",
 						"media": {
 							"markdown": "walkthrough/step1.md"
 						}
 					},
 					{
 						"id": "learn",
-						"title": "Let Cline Learn Your Codebase",
-						"description": "Point Cline to your project. It builds understanding to make smart, context-aware changes.",
+						"title": "Let Ola Learn Your Codebase",
+						"description": "Point Ola to your project. It builds understanding to make smart, context-aware changes.",
 						"media": {
 							"markdown": "walkthrough/step2.md"
 						}
 					},
 					{
 						"id": "advanced-features",
-						"title": "Always Use the Best AI Models",
-						"description": "Cline empowers you with State-of-the-Art AI, connecting to top models (Anthropic, Gemini, OpenAI & more).",
+						"title": "Choose Fast or Thinking",
+						"description": "Ola runs on Opengates models. Pick Fast for quick edits or Thinking for harder problems, no API keys needed.",
 						"media": {
 							"markdown": "walkthrough/step3.md"
 						}
@@ -96,7 +89,7 @@
 					{
 						"id": "getting-started",
 						"title": "You're Always in Control",
-						"description": "Review Cline's plans and diffs. Approve changes before they happen. No surprises.",
+						"description": "Review Ola's plans and diffs. Approve changes before they happen. No surprises.",
 						"media": {
 							"markdown": "walkthrough/step5.md"
 						},
@@ -110,17 +103,17 @@
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "claude-dev-ActivityBar",
-					"title": "Cline",
+					"id": "ola-code-ActivityBar",
+					"title": "Ola Code",
 					"icon": "assets/icons/icon.svg"
 				}
 			]
 		},
 		"views": {
-			"claude-dev-ActivityBar": [
+			"ola-code-ActivityBar": [
 				{
 					"type": "webview",
-					"id": "claude-dev.SidebarProvider",
+					"id": "ola-code.SidebarProvider",
 					"name": "",
 					"icon": "assets/icons/icon.svg"
 				}
@@ -128,215 +121,210 @@
 		},
 		"commands": [
 			{
-				"command": "cline.plusButtonClicked",
+				"command": "ola-code.plusButtonClicked",
 				"title": "New Task",
 				"icon": "$(add)"
 			},
 			{
-				"command": "cline.mcpButtonClicked",
+				"command": "ola-code.historyButtonClicked",
+				"title": "Chat History",
+				"icon": "$(history)"
+			},
+			{
+				"command": "ola-code.mcpButtonClicked",
 				"title": "MCP Servers",
 				"icon": "$(server)"
 			},
 			{
-				"command": "cline.marketplaceButtonClicked",
-				"title": "Customize",
-				"icon": "$(wrench)"
+				"command": "ola-code.worktreesButtonClicked",
+				"title": "Worktrees",
+				"icon": "$(git-branch)"
 			},
 			{
-				"command": "cline.historyButtonClicked",
-				"title": "History",
-				"icon": "$(history)"
-			},
-			{
-				"command": "cline.accountButtonClicked",
+				"command": "ola-code.accountButtonClicked",
 				"title": "Account",
 				"icon": "$(account)"
 			},
 			{
-				"command": "cline.settingsButtonClicked",
-				"title": "Settings",
-				"icon": "$(settings-gear)"
-			},
-			{
-				"command": "cline.dev.createTestTasks",
+				"command": "ola-code.dev.createTestTasks",
 				"title": "Create Test Tasks",
-				"category": "Cline",
-				"when": "cline.isDevMode"
+				"category": "Ola",
+				"when": "ola-code.isDevMode"
 			},
 			{
-				"command": "cline.dev.expireMcpOAuthTokens",
+				"command": "ola-code.dev.expireMcpOAuthTokens",
 				"title": "Expire MCP OAuth Tokens (for testing)",
-				"category": "Cline",
-				"when": "cline.isDevMode"
+				"category": "Ola",
+				"when": "ola-code.isDevMode"
 			},
 			{
-				"command": "cline.addToChat",
-				"title": "Add to Cline",
-				"category": "Cline"
+				"command": "ola-code.addToChat",
+				"title": "Add to Ola",
+				"category": "Ola"
 			},
 			{
-				"command": "cline.addTerminalOutputToChat",
-				"title": "Add to Cline",
-				"category": "Cline"
+				"command": "ola-code.addTerminalOutputToChat",
+				"title": "Add to Ola",
+				"category": "Ola"
 			},
 			{
-				"command": "cline.focusChatInput",
+				"command": "ola-code.focusChatInput",
 				"title": "Jump to Chat Input",
-				"category": "Cline"
+				"category": "Ola"
 			},
 			{
-				"command": "cline.generateGitCommitMessage",
-				"title": "Generate Commit Message with Cline",
-				"category": "Cline",
-				"icon": "$(cline-icon)"
+				"command": "ola-code.generateGitCommitMessage",
+				"title": "Generate Commit Message with Ola",
+				"category": "Ola",
+				"icon": "$(ola-code-icon)"
 			},
 			{
-				"command": "cline.abortGitCommitMessage",
-				"title": "Generate Commit Message with Cline - Stop",
-				"category": "Cline",
+				"command": "ola-code.abortGitCommitMessage",
+				"title": "Generate Commit Message with Ola - Stop",
+				"category": "Ola",
 				"icon": "$(debug-stop)"
 			},
 			{
-				"command": "cline.explainCode",
-				"title": "Explain with Cline",
-				"category": "Cline"
+				"command": "ola-code.explainCode",
+				"title": "Explain with Ola",
+				"category": "Ola"
 			},
 			{
-				"command": "cline.improveCode",
-				"title": "Improve with Cline",
-				"category": "Cline"
+				"command": "ola-code.improveCode",
+				"title": "Improve with Ola",
+				"category": "Ola"
 			},
 			{
-				"command": "cline.jupyterGenerateCell",
-				"title": "Generate Jupyter Cell with Cline",
-				"category": "Cline",
+				"command": "ola-code.jupyterGenerateCell",
+				"title": "Generate Jupyter Cell with Ola",
+				"category": "Ola",
 				"icon": "$(sparkle)"
 			},
 			{
-				"command": "cline.jupyterExplainCell",
-				"title": "Explain Jupyter Cell with Cline",
-				"category": "Cline",
+				"command": "ola-code.jupyterExplainCell",
+				"title": "Explain Jupyter Cell with Ola",
+				"category": "Ola",
 				"icon": "$(question)"
 			},
 			{
-				"command": "cline.jupyterImproveCell",
-				"title": "Improve Jupyter Cell with Cline",
-				"category": "Cline",
+				"command": "ola-code.jupyterImproveCell",
+				"title": "Improve Jupyter Cell with Ola",
+				"category": "Ola",
 				"icon": "$(lightbulb)"
 			},
 			{
-				"command": "cline.openWalkthrough",
+				"command": "ola-code.openWalkthrough",
 				"title": "Open Walkthrough",
-				"category": "Cline"
+				"category": "Ola"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "cline.addToChat",
-				"key": "cmd+'",
-				"mac": "cmd+'",
-				"win": "ctrl+'",
-				"linux": "ctrl+'",
+				"command": "ola-code.addToChat",
+				"key": "ctrl+alt+'",
+				"mac": "cmd+alt+'",
+				"win": "ctrl+alt+'",
+				"linux": "ctrl+alt+'",
 				"when": "editorHasSelection"
 			},
 			{
-				"command": "cline.generateGitCommitMessage",
+				"command": "ola-code.generateGitCommitMessage",
 				"when": "config.git.enabled && scmProvider == git"
 			},
 			{
-				"command": "cline.focusChatInput",
-				"key": "cmd+'",
-				"mac": "cmd+'",
-				"win": "ctrl+'",
-				"linux": "ctrl+'",
+				"command": "ola-code.focusChatInput",
+				"key": "ctrl+alt+'",
+				"mac": "cmd+alt+'",
+				"win": "ctrl+alt+'",
+				"linux": "ctrl+alt+'",
 				"when": "!editorHasSelection"
 			}
 		],
 		"menus": {
 			"view/title": [
 				{
-					"command": "cline.plusButtonClicked",
+					"command": "ola-code.plusButtonClicked",
 					"group": "navigation@1",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == ola-code.SidebarProvider"
 				},
 				{
-					"command": "cline.marketplaceButtonClicked",
+					"command": "ola-code.historyButtonClicked",
 					"group": "navigation@2",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == ola-code.SidebarProvider"
 				},
 				{
-					"command": "cline.historyButtonClicked",
+					"command": "ola-code.mcpButtonClicked",
 					"group": "navigation@3",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == ola-code.SidebarProvider"
 				},
 				{
-					"command": "cline.accountButtonClicked",
+					"command": "ola-code.worktreesButtonClicked",
+					"group": "navigation@4",
+					"when": "view == ola-code.SidebarProvider"
+				},
+				{
+					"command": "ola-code.accountButtonClicked",
 					"group": "navigation@5",
-					"when": "view == claude-dev.SidebarProvider"
-				},
-				{
-					"command": "cline.settingsButtonClicked",
-					"group": "navigation@6",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == ola-code.SidebarProvider"
 				}
 			],
 			"editor/context": [
 				{
-					"command": "cline.addToChat",
+					"command": "ola-code.addToChat",
 					"group": "navigation",
 					"when": "editorHasSelection"
 				}
 			],
 			"terminal/context": [
 				{
-					"command": "cline.addTerminalOutputToChat",
+					"command": "ola-code.addTerminalOutputToChat",
 					"group": "navigation"
 				}
 			],
 			"scm/title": [
 				{
-					"command": "cline.generateGitCommitMessage",
+					"command": "ola-code.generateGitCommitMessage",
 					"group": "navigation",
-					"when": "config.git.enabled && scmProvider == git && !cline.isGeneratingCommit"
+					"when": "config.git.enabled && scmProvider == git && !ola-code.isGeneratingCommit"
 				},
 				{
-					"command": "cline.abortGitCommitMessage",
+					"command": "ola-code.abortGitCommitMessage",
 					"group": "navigation",
-					"when": "config.git.enabled && scmProvider == git && cline.isGeneratingCommit"
+					"when": "config.git.enabled && scmProvider == git && ola-code.isGeneratingCommit"
 				}
 			],
 			"notebook/toolbar": [
 				{
-					"command": "cline.jupyterGenerateCell",
+					"command": "ola-code.jupyterGenerateCell",
 					"group": "navigation/add@1",
 					"when": "notebookType == 'jupyter-notebook'"
 				}
 			],
 			"notebook/cell/title": [
 				{
-					"command": "cline.jupyterExplainCell",
+					"command": "ola-code.jupyterExplainCell",
 					"group": "inline@1",
 					"when": "notebookType == 'jupyter-notebook'"
 				},
 				{
-					"command": "cline.jupyterImproveCell",
+					"command": "ola-code.jupyterImproveCell",
 					"group": "inline@2",
 					"when": "notebookType == 'jupyter-notebook'"
 				}
 			],
 			"commandPalette": [
 				{
-					"command": "cline.generateGitCommitMessage",
-					"when": "config.git.enabled && !cline.isGeneratingCommit"
+					"command": "ola-code.generateGitCommitMessage",
+					"when": "config.git.enabled && !ola-code.isGeneratingCommit"
 				},
 				{
-					"command": "cline.abortGitCommitMessage",
-					"when": "config.git.enabled && cline.isGeneratingCommit"
+					"command": "ola-code.abortGitCommitMessage",
+					"when": "config.git.enabled && ola-code.isGeneratingCommit"
 				}
 			]
 		},
 		"configuration": {
-			"title": "Cline",
+			"title": "Ola Code",
 			"properties": {}
 		}
 	},

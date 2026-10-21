@@ -52,6 +52,7 @@ import { McpHub } from "@/services/mcp/McpHub"
 import { telemetryService } from "@/services/telemetry"
 import type { ClineExtensionContext } from "@/shared/cline"
 import { toLegacyApiProvider } from "@/shared/model-catalog/provider-helpers"
+import { resolveOpengatesModel } from "@/shared/opengates-models"
 import { ShowMessageRequest, ShowMessageType } from "@/shared/proto/host/window"
 import { Logger } from "@/shared/services/Logger"
 import { resolveDataDirFromEnv } from "@/shared/storage/storage-context"
@@ -60,12 +61,15 @@ import { arePathsEqual, getDesktopDir } from "@/utils/path"
 import { ClineAccountService } from "./account-service"
 import { AuthService, LogoutReason } from "./auth-service"
 import { BUILTIN_SLASH_COMMANDS } from "./builtin-slash-commands"
+import { type ChangesSummary, summarizeContentDiffs } from "./checkpoint-changes-summary"
 import { buildStartSessionInput, createHistoryItemFromSession } from "./cline-session-factory"
 import { MessageTranslatorState, reshapeErrorForWebview } from "./message-translator"
 import { createProviderCatalog } from "./model-catalog/catalog"
 import type { Disposable, ProviderCatalog, ProviderConfigChange, ProviderConfigStore } from "./model-catalog/contracts"
 import { parseProviderId } from "./model-catalog/provider-id"
 import { createProviderConfigStore } from "./model-catalog/store"
+import { OpengatesAuthService } from "./opengates-auth-service"
+import { OPENGATES_API_BASE_URL } from "./opengates-provider"
 import {
 	PROVIDER_FAILURE_ERROR_TYPE,
 	PROVIDER_FAILURE_PHASE,
@@ -1537,6 +1541,10 @@ export class Controller {
 		taskSettings?: Partial<Settings>,
 		cloudTarget?: CloudTarget,
 	): Promise<string | undefined> {
+		await OpengatesAuthService.get()?.requireAuthentication()
+		if (OpengatesAuthService.get() && cloudTarget) {
+			throw new Error("Cloud tasks are not available with the Opengates gateway.")
+		}
 		if (cloudTarget) {
 			// Register the cloud start before the first await so a Cancel that
 			// arrives while remote config is still loading finds it and stops it.
@@ -1573,6 +1581,7 @@ export class Controller {
 	}
 
 	async reinitExistingTaskFromId(taskId: string): Promise<void> {
+		await OpengatesAuthService.get()?.requireAuthentication()
 		await this.waitForInitialRemoteConfig()
 		this.turnStateTracker.set("streaming")
 		this.messageTranslatorState.clearTurnOutcome()
@@ -2119,6 +2128,19 @@ export class Controller {
 	}
 
 	/**
+	 * File count and added/removed line totals since the latest checkpoint, for
+	 * the changes bar above the composer. All zero when nothing can be compared.
+	 */
+	async getLatestCheckpointChangesSummary(): Promise<ChangesSummary> {
+		try {
+			return summarizeContentDiffs((await this.computeLatestCheckpointChanges()) ?? [])
+		} catch (error) {
+			Logger.debug(`[SdkController] Failed to summarize latest checkpoint changes: ${error}`)
+			return { files: 0, additions: 0, deletions: 0 }
+		}
+	}
+
+	/**
 	 * "View Changes" on the completion row: opens a multi-file diff of
 	 * everything that changed between the latest checkpoint — snapshotted when
 	 * the user's last message started this run — and the current working tree.
@@ -2184,8 +2206,8 @@ export class Controller {
 
 	// ---- Mode switching ----
 
-	async togglePlanActMode(modeToSwitchTo: Mode, chatContent?: ChatContent): Promise<boolean> {
-		return this.mode.togglePlanActMode(modeToSwitchTo, chatContent)
+	async togglePlanActMode(modeToSwitchTo: Mode, chatContent?: ChatContent, interactive?: boolean): Promise<boolean> {
+		return this.mode.togglePlanActMode(modeToSwitchTo, chatContent, interactive)
 	}
 
 	// ---- Telemetry ----
@@ -2667,15 +2689,32 @@ export class Controller {
 			const currentCloudTask = this.cloud.getCurrentTaskInfo()
 			return {
 				...state,
+				opengatesAuthEnabled: !!OpengatesAuthService.get(),
+				...(OpengatesAuthService.get()
+					? {
+							showFeatureTips: false,
+							olaInteractive: this.stateManager.getGlobalSettingsKey("olaInteractive") === true,
+							apiConfiguration: {
+								...state.apiConfiguration,
+								planModeApiProvider: "openai" as const,
+								actModeApiProvider: "openai" as const,
+								openAiBaseUrl: OPENGATES_API_BASE_URL,
+								openAiApiKey: "opengates-session",
+								planModeOpenAiModelId: resolveOpengatesModel(state.apiConfiguration, "plan"),
+								actModeOpenAiModelId: resolveOpengatesModel(state.apiConfiguration, "act"),
+							},
+						}
+					: {}),
 				currentTaskItem: snapshotTask?.taskId
 					? processedTaskHistory.find((item) => item.id === snapshotTask.taskId)
 					: undefined,
 				taskHistory: processedTaskHistory,
 				turnState: this.turnStateTracker.get(),
 				queuedPrompts,
-				cloudSessionsAvailable: isCloudSessionsFeatureAvailable(),
-				cloudSessionsEnabled: isCloudSessionsFeatureEnabled(),
-				cloudTaskTarget: isCloudSessionsFeatureEnabled() ? this.cloudTaskTarget.view() : undefined,
+				cloudSessionsAvailable: !OpengatesAuthService.get() && isCloudSessionsFeatureAvailable(),
+				cloudSessionsEnabled: !OpengatesAuthService.get() && isCloudSessionsFeatureEnabled(),
+				cloudTaskTarget:
+					!OpengatesAuthService.get() && isCloudSessionsFeatureEnabled() ? this.cloudTaskTarget.view() : undefined,
 				currentCloudTask,
 				cloudModelId: isCloudSessionsFeatureEnabled() || currentCloudTask ? this.cloud.getCloudModelId() : undefined,
 				stateVersion: minter.nextSeq(),

@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo, useState } from "react"
 import { TypewriterText } from "@/components/chat/TypewriterText"
 import { cleanPathPrefix } from "@/components/common/CodeAccordian"
 import { Button } from "@/components/ui/button"
+import { useAssistantName } from "@/hooks/useAssistantName"
 import { cn } from "@/lib/utils"
 import { FileServiceClient } from "@/services/grpc-client"
 import { getIconByToolName, getToolsNotInCurrentActivities, isLowStakesTool } from "../../utils/messageUtils"
@@ -110,6 +111,7 @@ const getCurrentActivities = (allMessages: ClineMessage[]): ClineMessage[] => {
  */
 export const ToolGroupRenderer = memo(({ messages, allMessages, isLastGroup }: ToolGroupRendererProps) => {
 	const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({})
+	const assistantName = useAssistantName()
 
 	// Filter out tools in the "current activities" range (being shown in loading state)
 	const filteredMessages = useMemo(() => getToolsNotInCurrentActivities(messages, allMessages), [messages, allMessages])
@@ -153,7 +155,10 @@ export const ToolGroupRenderer = memo(({ messages, allMessages, isLastGroup }: T
 		return [...dedupedCompleted, ...activeTools]
 	}, [completedTools, activeTools])
 
-	const summary = getToolGroupSummaryFromParsedTools(completedTools.map((item) => item.parsedTool))
+	const summary = getToolGroupSummaryFromParsedTools(
+		completedTools.map((item) => item.parsedTool),
+		assistantName,
+	)
 
 	const handleOpenFile = useCallback((filePath: string) => {
 		FileServiceClient.openFileRelativePath(StringRequest.create({ value: filePath })).catch((err) =>
@@ -357,7 +362,7 @@ function formatSearchDisplay(regex: string, path: string, filePattern?: string):
 /**
  * Get summary label for a tool group - shows what's been added to context.
  */
-export function getToolGroupSummaryFromParsedTools(tools: ClineSayTool[]): string {
+export function getToolGroupSummaryFromParsedTools(tools: ClineSayTool[], assistantName = "Cline"): string {
 	const counts = { read: 0, list: 0, search: 0, def: 0 }
 
 	for (const tool of tools) {
@@ -394,5 +399,5 @@ export function getToolGroupSummaryFromParsedTools(tools: ClineSayTool[]): strin
 		parts.push(`performed ${counts.search} search${counts.search > 1 ? "es" : ""}`)
 	}
 
-	return parts.length === 0 ? "Context" : "Cline" + action + parts.join(", ")
+	return parts.length === 0 ? "Context" : assistantName + action + parts.join(", ")
 }

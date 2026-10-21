@@ -1,7 +1,8 @@
 import { Empty, StringRequest } from "@shared/proto/cline/common"
 import * as vscode from "vscode"
+import { ExtensionRegistryInfo } from "@/registry"
 
-const CLINE_OUTPUT_CHANNEL = vscode.window.createOutputChannel("Cline")
+const CLINE_OUTPUT_CHANNEL = vscode.window.createOutputChannel(ExtensionRegistryInfo.name === "ola-code" ? "Ola Code" : "Cline")
 
 // Appends a log message to all Cline output channels.
 export async function debugLog(request: StringRequest): Promise<Empty> {

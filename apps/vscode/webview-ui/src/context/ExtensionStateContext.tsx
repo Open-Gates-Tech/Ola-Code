@@ -301,6 +301,8 @@ export const ExtensionStateContextProvider: React.FC<{
 		vscodeTerminalExecutionMode: "vscodeTerminal",
 		defaultTerminalProfile: "default",
 		isNewUser: false,
+		opengatesAuthEnabled: false,
+		olaInteractive: false,
 		welcomeViewCompleted: false,
 		onboardingModels: undefined,
 		mcpResponsesCollapsed: false, // Default value (expanded), will be overwritten by extension state
@@ -423,6 +425,9 @@ export const ExtensionStateContextProvider: React.FC<{
 
 	const marketplaceButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const mcpButtonUnsubscribeRef = useRef<(() => void) | null>(null)
+	// Read inside long-lived subscriptions that are registered once.
+	const opengatesAuthEnabledRef = useRef(state.opengatesAuthEnabled)
+	opengatesAuthEnabledRef.current = state.opengatesAuthEnabled
 	const historyButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
 	const chatButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const accountButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
@@ -511,7 +516,11 @@ export const ExtensionStateContextProvider: React.FC<{
 			{
 				onResponse: () => {
 					console.log("[DEBUG] Received mcpButtonClicked event from gRPC stream")
-					navigateToMarketplace()
+					if (opengatesAuthEnabledRef.current) {
+						navigateToMcp("configure")
+					} else {
+						navigateToMarketplace()
+					}
 				},
 				onError: (error: any) => {
 					console.error("Error in mcpButtonClicked subscription:", error)

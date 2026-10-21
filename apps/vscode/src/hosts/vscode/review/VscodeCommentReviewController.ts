@@ -1,6 +1,8 @@
 import * as vscode from "vscode"
 import { CommentReviewController, type ReviewComment } from "@/integrations/editor/CommentReviewController"
+import { ExtensionRegistryInfo } from "@/registry"
 import { Logger } from "@/shared/services/Logger"
+import { getAssistantDisplayName } from "../terminal/terminal-branding"
 import { DIFF_VIEW_URI_SCHEME } from "../VscodeDiffContentProvider"
 
 /**
@@ -25,7 +27,10 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 	constructor() {
 		super()
 		// Create the comment controller
-		this.commentController = vscode.comments.createCommentController("cline-ai-review", "Cline AI Review")
+		this.commentController = vscode.comments.createCommentController(
+			ExtensionRegistryInfo.reviewControllerId,
+			`${getAssistantDisplayName()} AI Review`,
+		)
 	}
 
 	/**
@@ -64,7 +69,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString(comment.comment),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: getAssistantDisplayName(),
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}
@@ -109,7 +114,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString("_Thinking..._"),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: getAssistantDisplayName(),
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}
@@ -179,7 +184,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString(this.streamingContent || "_Thinking..._"),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: getAssistantDisplayName(),
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}
@@ -201,7 +206,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString(finalContent),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: getAssistantDisplayName(),
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}

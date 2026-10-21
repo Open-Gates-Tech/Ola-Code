@@ -18,6 +18,9 @@ service CheckpointsService {
   // current working tree (0 when no checkpoint exists). Used to enable the
   // "View Changes" button only when there is something to show.
   rpc checkpointLatestChangesCount(EmptyRequest) returns (Int64);
+  // Summarizes the same comparison as a file count plus added and removed
+  // line totals, for the changes bar above the composer.
+  rpc checkpointLatestChangesSummary(EmptyRequest) returns (CheckpointChangesSummary);
   // Reports whether Reset Code can restore the workspace from the user
   // message with the given ts. Asked when the user opens a message for
   // editing, so the answer reflects the checkpoints that exist right then.
@@ -29,4 +32,10 @@ message CheckpointRestoreRequest {
   int64 number = 2;
   string restore_type = 3;
   optional int64 offset = 4;
+}
+
+message CheckpointChangesSummary {
+  int64 files = 1;
+  int64 additions = 2;
+  int64 deletions = 3;
 }

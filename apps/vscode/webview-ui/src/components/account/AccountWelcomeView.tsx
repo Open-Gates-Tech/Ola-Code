@@ -9,8 +9,21 @@ import { ClinePassWelcomeCallout } from "./ClinePassCard"
 // 	<div className="flex flex-col items-center pr-3 gap-2.5">
 // 		<ClineLogoWhite className="size-16 mb-4" />
 export const AccountWelcomeView = () => {
-	const { environment } = useExtensionState()
+	const { environment, opengatesAuthEnabled } = useExtensionState()
 	const { isLoginLoading, authStatusMessage, handleSignIn } = useClineSignIn()
+
+	if (opengatesAuthEnabled) {
+		return (
+			<div className="flex flex-col items-center gap-3 p-5">
+				<h2>Welcome to Ola Code</h2>
+				<p>Sign in with your Opengates account to start chatting.</p>
+				<VSCodeButton disabled={isLoginLoading} onClick={handleSignIn}>
+					{isLoginLoading ? "Opening sign-in..." : "Sign In with Opengates"}
+				</VSCodeButton>
+				<ClineAuthStatus message={authStatusMessage} />
+			</div>
+		)
+	}
 
 	return (
 		<div className="flex flex-col items-center gap-2.5">

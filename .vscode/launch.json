@@ -9,7 +9,11 @@
 			"name": "Run Extension (production)",
 			"type": "extensionHost",
 			"request": "launch",
+			"runtimeExecutable": "${execPath}",
 			"args": [
+				"--user-data-dir=${workspaceFolder}/apps/vscode/dist/dev-profile",
+				"--extensions-dir=${workspaceFolder}/apps/vscode/dist/dev-extensions",
+				"--sync=off",
 				"--extensionDevelopmentPath=${workspaceFolder}/apps/vscode",
 				"--disable-workspace-trust",
 				"--disable-extension",

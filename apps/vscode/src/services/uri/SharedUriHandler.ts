@@ -1,6 +1,9 @@
 import fs from "fs/promises"
 import { WebviewProvider } from "@/core/webview"
+import { HostProvider } from "@/hosts/host-provider"
+import { OPENGATES_CALLBACK_PATH, OpengatesAuthService, OpengatesCallbackError } from "@/sdk/opengates-auth-service"
 import { writeLgWebhookConfig, writeLgWebhookHooks } from "@/services/lg-cns-integration/webhook-hooks"
+import { ShowMessageType } from "@/shared/proto/host/window"
 import { Logger } from "@/shared/services/Logger"
 
 export const TASK_URI_PATH = "/task"
@@ -18,6 +21,24 @@ export class SharedUriHandler {
 	public static async handleUri(url: string): Promise<boolean> {
 		const parsedUrl = new URL(url)
 		const path = parsedUrl.pathname
+		if (path === OPENGATES_CALLBACK_PATH) {
+			try {
+				const auth = OpengatesAuthService.get()
+				if (!auth) throw new Error("Opengates authentication is not available in this host.")
+				await auth.handleCallback(parsedUrl)
+				return true
+			} catch (error) {
+				Logger.error("Opengates callback failed. Start sign-in again.")
+				await HostProvider.window.showMessage({
+					type: ShowMessageType.ERROR,
+					message:
+						error instanceof OpengatesCallbackError
+							? error.message
+							: "Opengates sign-in failed or expired. Check your connection and start sign-in again.",
+				})
+				return false
+			}
+		}
 
 		// Create URLSearchParams from the query string, but preserve plus signs
 		// by replacing them with a placeholder before parsing

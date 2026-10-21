@@ -36,7 +36,7 @@ const WORKSPACE_RESTORE_TOOLTIPS: Record<WorkspaceRestoreAvailability["state"], 
 }
 
 const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageTs, canRestoreWorkspace }) => {
-	const { navigateToSettings, enableCheckpointsSetting } = useExtensionState()
+	const { navigateToSettings, enableCheckpointsSetting, opengatesAuthEnabled } = useExtensionState()
 	const [isEditing, setIsEditing] = useState(false)
 	const [editedText, setEditedText] = useState(text ?? "")
 	const [editedImages, setEditedImages] = useState(images ?? [])
@@ -153,11 +153,14 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 		</button>
 	) : null
 
+	const olaBubble = opengatesAuthEnabled && !isEditing
+
 	return (
 		<div
-			className={`group relative p-2.5 my-1 text-badge-foreground rounded-xs ${
-				messageTs && !isEditing ? "cursor-pointer pr-8" : ""
-			}`}
+			className={`group relative p-2.5 my-1 ${olaBubble ? "ola-user-bubble px-3.5" : "text-badge-foreground rounded-xs"} ${
+				opengatesAuthEnabled && isEditing ? "rounded-2xl" : ""
+			} ${messageTs && !isEditing ? "cursor-pointer pr-8" : ""}`}
+			data-testid="user-message"
 			onClick={messageTs && !isEditing ? startEditing : undefined}
 			onKeyDown={
 				messageTs && !isEditing
@@ -171,7 +174,7 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 			}
 			role={messageTs && !isEditing ? "button" : undefined}
 			style={{
-				backgroundColor: "var(--vscode-badge-background)",
+				backgroundColor: olaBubble ? undefined : "var(--vscode-badge-background)",
 				whiteSpace: "pre-line",
 				wordWrap: "break-word",
 			}}
@@ -183,7 +186,7 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 					<TooltipTrigger asChild>
 						<button
 							aria-label="Edit and regenerate from this message"
-							className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-80 hover:opacity-100 bg-transparent border-0 text-badge-foreground cursor-pointer p-1"
+							className={`absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-80 hover:opacity-100 bg-transparent border-0 cursor-pointer p-1 ${opengatesAuthEnabled ? "text-inherit" : "text-badge-foreground"}`}
 							onClick={(event) => {
 								event.stopPropagation()
 								startEditing()

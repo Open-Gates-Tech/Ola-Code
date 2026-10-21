@@ -3,6 +3,7 @@ import type { Mode } from "@shared/storage/types"
 import type { LucideIcon } from "lucide-react"
 import type React from "react"
 import { useMemo } from "react"
+import { OlaThinkingIcon } from "@/assets/OlaThinkingIcon"
 import { cleanPathPrefix } from "../common/CodeAccordian"
 import { getIconByToolName } from "./chat-view"
 import { isApiReqAbsorbable, isLowStakesTool } from "./chat-view/utils/messageUtils"
@@ -23,6 +24,7 @@ interface RequestStartRowProps {
 	isExpanded: boolean
 	handleToggle: () => void
 	retryFailedRequest?: () => Promise<boolean>
+	olaThinkingIcon?: boolean
 }
 
 // State type for api_req_started rendering
@@ -142,6 +144,7 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 	isExpanded,
 	message,
 	retryFailedRequest,
+	olaThinkingIcon,
 }) => {
 	// Derive explicit state
 	const hasError = !!(apiRequestFailedMessage || apiReqStreamingFailedMessage)
@@ -237,7 +240,8 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 				(!hasCost ? (
 					// Still streaming - show "Thinking..." text with shimmer
 					<div className="ml-1 pl-0 mb-1 -mt-1.25 pt-1">
-						<div className="inline-flex justify-baseline gap-0.5 text-left select-none px-0 w-full">
+						<div className="inline-flex items-center justify-baseline gap-0.5 text-left select-none px-0 w-full">
+							{olaThinkingIcon && <OlaThinkingIcon className="mr-1" />}
 							<span className="animate-shimmer bg-linear-90 from-foreground to-description bg-[length:200%_100%] bg-clip-text text-transparent text-[13px] leading-none">
 								Thinking...
 							</span>

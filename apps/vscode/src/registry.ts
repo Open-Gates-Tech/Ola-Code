@@ -1,13 +1,14 @@
 import { name, publisher, version } from "../package.json"
 import { HostProvider } from "./hosts/host-provider"
 
-const prefix = name === "claude-dev" ? "cline" : name
+const contributionName = name
+const prefix = contributionName === "claude-dev" ? "cline" : contributionName
 
 /**
  * List of commands with the name of the extension they are registered under.
  * These should match the command IDs defined in package.json.
  * For Nightly build, the publish script has updated all the commands to use the extension name as prefix.
- * In production, all commands are registered under "cline" for consistency.
+ * Each product must own its namespace so Cline and Ola can run side by side.
  */
 const ClineCommands = {
 	PlusButton: prefix + ".plusButtonClicked",
@@ -26,6 +27,8 @@ const ClineCommands = {
 	Walkthrough: prefix + ".openWalkthrough",
 	GenerateCommit: prefix + ".generateGitCommitMessage",
 	AbortCommit: prefix + ".abortGitCommitMessage",
+	DevCreateTestTasks: prefix + ".dev.createTestTasks",
+	DevExpireMcpOAuthTokens: prefix + ".dev.expireMcpOAuthTokens",
 	// Jupyter Notebook commands
 	JupyterGenerateCell: prefix + ".jupyterGenerateCell",
 	JupyterExplainCell: prefix + ".jupyterExplainCell",
@@ -37,7 +40,7 @@ const ClineCommands = {
  * These should match the name + view IDs defined in package.json.
  */
 const ClineViewIds = {
-	Sidebar: name + ".SidebarProvider",
+	Sidebar: contributionName + ".SidebarProvider",
 }
 
 /**
@@ -49,6 +52,15 @@ export const ExtensionRegistryInfo = {
 	name,
 	version,
 	publisher,
+	contextKeys: {
+		isDevMode: prefix + ".isDevMode",
+		isGeneratingCommit: prefix + ".isGeneratingCommit",
+	},
+	walkthroughId: name === "ola-code" ? "OlaCodeWalkthrough" : "ClineWalkthrough",
+	diffScheme: prefix + "-diff",
+	editPreviewScheme: prefix + "-edit-preview",
+	reviewControllerId: prefix + "-ai-review",
+	iconId: prefix + "-icon",
 	commands: ClineCommands,
 	views: ClineViewIds,
 }

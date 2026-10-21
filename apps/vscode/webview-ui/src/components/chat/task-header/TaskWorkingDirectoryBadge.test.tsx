@@ -10,6 +10,9 @@ vi.mock("@/components/ui/tooltip", () => ({
 	TooltipTrigger: ({ children }: PropsWithChildren) => <>{children}</>,
 }))
 
+const extensionState = vi.hoisted(() => ({ opengatesAuthEnabled: false }))
+vi.mock("@/context/ExtensionStateContext", () => ({ useExtensionState: () => extensionState }))
+
 const roots = (...paths: string[]): WorkspaceRoot[] => paths.map((path) => ({ path, vcs: "git" }) as WorkspaceRoot)
 
 describe("isTaskCwdOutsideWorkspace", () => {
@@ -95,6 +98,20 @@ describe("TaskWorkingDirectoryBadge", () => {
 		)
 		expect(screen.getByText("cline-hello")).toBeDefined()
 		expect(screen.getByText(/working directory is \/tmp\/cline-hello/)).toBeDefined()
+		expect(screen.getByText(/Cline reads and edits files/)).toBeDefined()
+	})
+
+	it("names Ola in the tooltip for Opengates builds", () => {
+		extensionState.opengatesAuthEnabled = true
+		render(
+			<TaskWorkingDirectoryBadge
+				platform="linux"
+				taskCwd="/tmp/cline-hello"
+				workspaceRoots={roots("/home/user/project")}
+			/>,
+		)
+		expect(screen.getByText(/Ola reads and edits files/)).toBeDefined()
+		extensionState.opengatesAuthEnabled = false
 	})
 
 	it("renders nothing when the cwd is inside the workspace", () => {

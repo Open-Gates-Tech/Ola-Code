@@ -12,6 +12,8 @@ interface InputSectionProps {
 	placeholderText: string
 	shouldDisableFilesAndImages: boolean
 	selectFilesAndImages: () => Promise<void>
+	composerActions?: React.ReactNode
+	stopButton?: React.ReactNode
 }
 
 /**
@@ -24,6 +26,8 @@ export const InputSection: React.FC<InputSectionProps> = ({
 	placeholderText,
 	shouldDisableFilesAndImages,
 	selectFilesAndImages,
+	composerActions,
+	stopButton,
 }) => {
 	const {
 		activeQuote,
@@ -85,6 +89,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
 
 			<ChatTextArea
 				activeQuote={activeQuote}
+				composerActions={composerActions}
 				inputValue={inputValue}
 				onFocusChange={handleFocusChange}
 				onHeightChange={() => {
@@ -103,6 +108,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
 				setSelectedFiles={setSelectedFiles}
 				setSelectedImages={setSelectedImages}
 				shouldDisableFilesAndImages={shouldDisableFilesAndImages}
+				stopButton={stopButton}
 			/>
 		</>
 	)

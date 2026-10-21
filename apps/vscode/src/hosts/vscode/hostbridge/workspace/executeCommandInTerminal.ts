@@ -1,6 +1,7 @@
 import { ExecuteCommandInTerminalRequest, ExecuteCommandInTerminalResponse } from "@shared/proto/host/workspace"
 import * as vscode from "vscode"
 import { Logger } from "@/shared/services/Logger"
+import { getTerminalBranding } from "../../terminal/terminal-branding"
 
 /**
  * Executes a command in a new terminal
@@ -13,8 +14,7 @@ export async function executeCommandInTerminal(
 	try {
 		// Create terminal with fixed options
 		const terminalOptions: vscode.TerminalOptions = {
-			name: "Cline",
-			iconPath: new vscode.ThemeIcon("cline-icon"),
+			...getTerminalBranding(),
 			env: {
 				CLINE_ACTIVE: "true",
 			},

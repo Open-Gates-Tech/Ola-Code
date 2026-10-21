@@ -289,6 +289,7 @@ message Settings {
   optional OpenRouterModelInfo act_mode_cline_pass_model_info = 186;
   optional bool cloud_sessions_enabled = 188;
   optional string open_telemetry_traces_exporter = 189;
+  optional bool ola_interactive = 190;
 }
 
 message State {
@@ -316,6 +317,8 @@ message TogglePlanActModeRequest {
   Metadata metadata = 1;
   PlanActMode mode = 2;
   optional ChatContent chat_content = 3;
+  // Ola Interactive is Act mode with clarification and approach confirmation first.
+  optional bool interactive = 4;
 }
 
 enum PlanActMode {

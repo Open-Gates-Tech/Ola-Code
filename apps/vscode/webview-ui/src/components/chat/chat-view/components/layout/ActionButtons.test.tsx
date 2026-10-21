@@ -146,6 +146,67 @@ describe("ActionButtons", () => {
 		expect(chatState.getDraftSnapshot).not.toHaveBeenCalled()
 	})
 
+	it("renders recovery actions as in-composer pills with the same semantics", () => {
+		mockTurnState.mockReturnValue({ phase: "error", anchorTs: 2 })
+		const task: ClineMessage = { ts: 1, type: "say", say: "task", text: "task" }
+		const failed: ClineMessage = { ts: 2, type: "ask", ask: "api_req_failed", text: "server error" }
+		const executeButtonAction = vi.fn().mockResolvedValue(true)
+
+		render(
+			<ActionButtons
+				chatState={makeChatState()}
+				messageHandlers={{ executeButtonAction } as unknown as MessageHandlers}
+				messages={[task, failed]}
+				mode="act"
+				task={task}
+				variant="composer">
+				{({ pills, stopButton }) => (
+					<>
+						{pills}
+						{stopButton}
+					</>
+				)}
+			</ActionButtons>,
+		)
+
+		const container = screen.getByTestId("composer-actions")
+		const [newTask, retry] = Array.from(container.querySelectorAll("button"))
+		expect(newTask).toHaveTextContent("Start New Task")
+		expect(retry).toHaveTextContent("Retry")
+		expect(retry).toHaveAttribute("data-variant", "primary")
+		expect(screen.queryByRole("button", { name: "Stop" })).not.toBeInTheDocument()
+
+		fireEvent.click(retry)
+		expect(executeButtonAction).toHaveBeenCalledWith({ type: "retry" })
+	})
+
+	it("turns Cancel into a composer Stop button instead of a pill", () => {
+		mockTurnState.mockReturnValue({ phase: "streaming", anchorTs: 1 })
+		const task: ClineMessage = { ts: 1, type: "say", say: "task", text: "task", partial: true }
+		const executeButtonAction = vi.fn().mockResolvedValue(true)
+
+		render(
+			<ActionButtons
+				chatState={makeChatState()}
+				messageHandlers={{ executeButtonAction } as unknown as MessageHandlers}
+				messages={[task]}
+				mode="act"
+				task={task}
+				variant="composer">
+				{({ pills, stopButton }) => (
+					<>
+						{pills}
+						{stopButton}
+					</>
+				)}
+			</ActionButtons>,
+		)
+
+		expect(screen.queryByTestId("composer-actions")).not.toBeInTheDocument()
+		fireEvent.click(screen.getByRole("button", { name: "Stop" }))
+		expect(executeButtonAction).toHaveBeenCalledWith({ type: "cancel" })
+	})
+
 	it("disables recovery buttons while a composer response is in flight", () => {
 		mockTurnState.mockReturnValue({ phase: "error", anchorTs: 2, seq: 3 })
 		const task: ClineMessage = { ts: 1, type: "say", say: "task", text: "task" }
