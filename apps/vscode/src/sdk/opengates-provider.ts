@@ -24,6 +24,19 @@ export function createOpengatesFetch(
 		await auth.requireAuthentication()
 		const request = new Request(input, init)
 		const url = new URL(request.url)
+		if (url.pathname === "/v1/chat/completions" && !request.headers.has("Idempotency-Key")) {
+			request.headers.set("Idempotency-Key", crypto.randomUUID())
+		}
+		if (
+			url.pathname === "/v1/chat/completions" &&
+			request.body !== null &&
+			request.headers.get("Content-Type")?.includes("application/json")
+		) {
+			const body: unknown = await request.clone().json()
+			if (body && typeof body === "object" && "model" in body && body.model === "ola-code-pro") {
+				request.headers.set("X-Ola-Premium-Consent", "true")
+			}
+		}
 		if (url.origin !== new URL(OPENGATES_API_BASE_URL).origin || !url.pathname.startsWith("/v1/")) {
 			throw new Error("Refusing to send Opengates credentials outside the Opengates gateway.")
 		}

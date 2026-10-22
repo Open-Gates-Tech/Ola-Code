@@ -5,8 +5,15 @@ import { ExternalLinkIcon, LoaderCircleIcon, LogOutIcon, RefreshCwIcon, Sparkles
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { ClineUser } from "@/context/ClineAuthContext"
 import { AccountServiceClient } from "@/services/grpc-client"
+import { formatSparks, SparksUsage } from "./SparksUsage"
 
-const TIER_LABELS: Record<string, string> = { free: "Free", pro: "Pro", internal: "Internal" }
+const TIER_LABELS: Record<string, string> = {
+	free: "Free",
+	pro: "Pro",
+	ultra: "Ultra",
+	ultra_plus: "Ultra Plus",
+	internal: "Internal",
+}
 
 const compact = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 })
 
@@ -23,7 +30,7 @@ export function formatPrice(amount: number, currency: string): string {
 }
 
 function formatModelEquivalent(nusd: number | undefined): string {
-	return nusd === undefined ? "Unavailable" : `$${(nusd / 1_000_000_000).toFixed(3)} model-cost equivalent`
+	return nusd === undefined ? "Unavailable" : `${formatSparks(nusd)} Sparks equivalent`
 }
 
 function formatDate(iso: string | undefined): string | undefined {
@@ -122,6 +129,12 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 		void load()
 	}, [load])
 
+	useEffect(() => {
+		if (!account?.sparks?.version || loading) return
+		const timer = setInterval(() => void load(), 30_000)
+		return () => clearInterval(timer)
+	}, [account?.sparks?.version, loading, load])
+
 	const upgrade = async () => {
 		setUpgrading(true)
 		setUpgradeError(null)
@@ -190,6 +203,11 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 						<RefreshCwIcon className={loading ? "animate-spin" : undefined} size={12} />
 					</button>
 				</div>
+				{loadError && account && (
+					<p className="m-0 text-xs text-error" role="alert">
+						{loadError} Showing the last retrieved balance; refresh to retry.
+					</p>
+				)}
 				{loading && !account ? (
 					<div className="flex items-center gap-2 text-xs text-description">
 						<LoaderCircleIcon className="animate-spin" size={14} /> Loading usage...
@@ -198,6 +216,8 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 					<p className="m-0 text-xs text-error" role="alert">
 						{loadError}
 					</p>
+				) : account?.sparks ? (
+					<SparksUsage account={account} />
 				) : account ? (
 					<>
 						<UsageMeter allowance={account.fastLimit} label="Fast" remaining={account.fastRemaining} />
@@ -221,7 +241,7 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 				) : null}
 			</section>
 
-			{account?.agentBudgetTask?.mode === "shadow" && (
+			{!account?.sparks && account?.agentBudgetTask?.mode === "shadow" && (
 				<section className="ola-account-card flex flex-col gap-3" data-testid="opengates-agent-budget">
 					<div>
 						<h3 className="ola-account-heading">Shadow evaluation</h3>
@@ -308,7 +328,7 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 				</section>
 			)}
 
-			{account?.upgradeProduct && (
+			{!account?.sparks && account?.upgradeProduct && (
 				<section className="ola-account-card ola-upgrade-card flex flex-col gap-2" data-testid="opengates-upgrade">
 					<div className="flex items-center gap-2">
 						<SparklesIcon aria-hidden="true" size={14} />

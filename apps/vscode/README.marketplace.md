@@ -81,15 +81,20 @@ Toggle effortlessly between compute profiles directly from the model picker (you
 
 ---
 
-## Plans & Fair-Share Quotas
+## Plans & Sparks Usage
 
-Ola Code is built on Opengates' mission to democratize access to world-class software engineering tools—offering transparent token pools and localized payment options (including Mobile Money / M-Pesa and cards via Paystack) without restrictive hourly lockouts.
+Ola Code is built on Opengates' mission to democratize access to world-class software engineering tools. The Sparks pilot replaces separate token pools with one model-usage wallet across Fast, Thinking, and Pro.
 
-| Tier | Monthly Fast Tokens | Monthly Thinking Tokens | Web Searches | Ideal For |
-| :--- | :--- | :--- | :--- | :--- |
-| **Free Community** | 500,000 | 250,000 | 5 / day | Students, learners, and open-source exploration |
-| **Builder / Pro** | 10,000,000 | 1,500,000 | 20 / day | Professional freelancers, full-stack developers, and startup builders |
-| **Ultra** | 30,000,000 | 5,000,000 | 50 / day | Heavy agentic workflows, engineering teams, and high-velocity shipping |
+| Tier | Monthly subscription | Included Sparks | Web Searches |
+| :--- | :--- | :--- | :--- |
+| **Free Community** | Free | 200,000 | 5 / day |
+| **Builder / Pro** | USD 5 | 5,000,000 | 20 / day |
+| **Ultra** | USD 15 | 15,000,000 | 50 / day |
+| **Ultra Plus** | USD 30 | 30,000,000 | 50 / day |
+
+1,000,000 Sparks represents USD 1 of model-cost capacity, not a cash balance. Actual input, cached input, cache-write and output usage consume Sparks at the selected model's published rates. Holds are temporary reservations, not charges. Included Sparks expire at the monthly reset; purchased Sparks survive it and are consumed after included Sparks. Measured interrupted calls remain chargeable; unknown usage is not charged. Ola covers external tool and search costs.
+
+The account panel shows available, included, purchased and held Sparks, the next reset, and expandable recent-call token diagnostics. It refreshes while open. Wallet UI appears only when the server supplies a real versioned wallet; older servers retain their explicitly labelled legacy token meters. New subscription prices are USD-only; checkout stays unavailable until USD collection is verified, and payment channels are confirmed by the payment provider rather than promised here.
 
 ---
 

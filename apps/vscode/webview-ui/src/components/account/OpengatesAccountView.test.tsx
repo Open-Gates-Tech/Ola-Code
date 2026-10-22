@@ -120,7 +120,7 @@ describe("OpengatesAccountView", () => {
 		expect(screen.getByText("Premium shadow evaluation grant")).toBeInTheDocument()
 		expect(
 			screen.getByText(
-				"$2.500 model-cost equivalent grant; $2.445 model-cost equivalent remaining; $0.005 model-cost equivalent held",
+				"2,500,000 Sparks equivalent grant; 2,445,000 Sparks equivalent remaining; 5,000 Sparks equivalent held",
 			),
 		).toBeInTheDocument()
 		expect(screen.getByText(/Provider-risk dependency is missing/)).toBeInTheDocument()

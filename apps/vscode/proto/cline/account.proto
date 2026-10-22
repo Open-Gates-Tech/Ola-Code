@@ -63,6 +63,8 @@ service AccountService {
 
   // Starts an Opengates Pro checkout and opens it in the browser. Returns the checkout URL.
   rpc startOpengatesUpgrade(EmptyRequest) returns (String);
+
+  rpc startOpengatesPlanCheckout(StringRequest) returns (String);
 }
 
 message OpengatesProduct {
@@ -71,6 +73,8 @@ message OpengatesProduct {
   // Price in the currency's minor unit (e.g. cents).
   int64 amount = 3;
   int32 days = 4;
+  string tier = 5;
+  string billing_version = 6;
 }
 
 message OpengatesAccount {
@@ -92,6 +96,38 @@ message OpengatesAccount {
   optional int64 reason_limit = 13;
   // Last shadow-only agent task snapshot, for evaluation display only.
   optional OpengatesAgentBudgetTask agent_budget_task = 14;
+  optional OpengatesSparksWallet sparks = 15;
+  repeated OpengatesSparksCall sparks_calls = 16;
+  repeated OpengatesProduct products = 17;
+  bool billing_enabled = 18;
+}
+
+message OpengatesSparksWallet {
+  string version = 1;
+  string unit = 2;
+  int64 grant_nusd = 3;
+  int64 used_nusd = 4;
+  int64 held_nusd = 5;
+  int64 purchased_nusd = 6;
+  int64 purchased_held_nusd = 7;
+  string period = 8;
+  string reset_at = 9;
+}
+
+message OpengatesSparksCall {
+  string id = 1;
+  string parent = 2;
+  string model = 3;
+  string role = 4;
+  string state = 5;
+  string outcome = 6;
+  int64 debit_nusd = 7;
+  int64 held_nusd = 8;
+  int64 prompt_tokens = 9;
+  int64 cached_tokens = 10;
+  int64 cache_write_tokens = 11;
+  int64 completion_tokens = 12;
+  string timestamp = 13;
 }
 
 message OpengatesAgentBudgetBalance {
