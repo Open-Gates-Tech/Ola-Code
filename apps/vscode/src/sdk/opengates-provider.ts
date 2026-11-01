@@ -43,8 +43,10 @@ export function createOpengatesFetch(
 		const send = async (token: string) => {
 			const headers = new Headers(request.headers)
 			headers.set("Authorization", `Bearer ${token}`)
-			if (taskCorrelation?.enabled && url.pathname === "/v1/chat/completions") {
-				headers.set("X-Ola-Agent-Task-Id", taskCorrelation.taskId)
+			if (taskCorrelation && url.pathname === "/v1/chat/completions") {
+				// Keeps one task on one route so the provider's prompt cache survives agent steps.
+				headers.set("X-Ola-Session-Id", taskCorrelation.taskId)
+				if (taskCorrelation.enabled) headers.set("X-Ola-Agent-Task-Id", taskCorrelation.taskId)
 			}
 			return baseFetch(new Request(request.clone(), { headers, redirect: "error" }))
 		}

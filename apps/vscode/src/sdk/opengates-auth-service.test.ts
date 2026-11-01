@@ -292,6 +292,7 @@ describe("Opengates gateway requests", () => {
 
 		await wrappedFetch(`${OPENGATES_API_BASE_URL}/chat/completions`, { method: "POST" })
 		expect((baseFetch.mock.calls[0][0] as Request).headers.get("X-Ola-Agent-Task-Id")).toBeNull()
+		expect((baseFetch.mock.calls[0][0] as Request).headers.get("X-Ola-Session-Id")).toBe("task-stable-1")
 
 		correlation.enabled = true
 		await wrappedFetch(`${OPENGATES_API_BASE_URL}/chat/completions`, { method: "POST" })
@@ -299,6 +300,7 @@ describe("Opengates gateway requests", () => {
 
 		await wrappedFetch(`${OPENGATES_API_BASE_URL}/models`, { method: "GET" })
 		expect((baseFetch.mock.calls[2][0] as Request).headers.get("X-Ola-Agent-Task-Id")).toBeNull()
+		expect((baseFetch.mock.calls[2][0] as Request).headers.get("X-Ola-Session-Id")).toBeNull()
 	})
 
 	it("preserves unrecognized final shadow metadata in the gateway response body", async () => {
