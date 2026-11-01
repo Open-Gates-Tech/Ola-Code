@@ -1599,6 +1599,32 @@ describe("buildSessionConfig", () => {
 		}
 	})
 
+	it.each([
+		"ola-code-fast",
+		"ola-code-reason",
+		"ola-code-pro",
+	])("budgets %s consistently for automatic and manual compaction", async (modelId) => {
+		mocks.stateManager.getApiConfiguration.mockReturnValue({ actModeOpenAiModelId: modelId } as any)
+		mocks.stateManager.getGlobalSettingsKey.mockImplementation(() => undefined)
+		const auth = vi.spyOn(OpengatesAuthService, "get").mockReturnValue({
+			requireAuthentication: vi.fn(async () => undefined),
+		} as any)
+		try {
+			const config = await buildSessionConfig({ cwd: process.cwd(), mode: "act" })
+			expect(config.knownModels?.[modelId]).toMatchObject({
+				contextWindow: 200_000,
+				maxInputTokens: 175_424,
+				maxTokens: 8192,
+			})
+			expect(config.providerConfig?.knownModels).toBe(config.knownModels)
+			expect(config.maxTokensPerTurn).toBe(8192)
+			expect(config.providerConfig?.retryOwner).toBe("upstream")
+			expect(config.compaction?.enabled).toBe(true)
+		} finally {
+			auth.mockRestore()
+		}
+	})
+
 	it("builds a coherent remote runtime model and platform snapshot", async () => {
 		const config = await buildSessionConfig({
 			cwd: "/workspace",

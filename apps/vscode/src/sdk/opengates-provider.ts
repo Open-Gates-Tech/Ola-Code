@@ -1,9 +1,10 @@
 import type { ProviderConfig } from "@cline/llms"
 import type { ApiConfiguration } from "@/shared/api"
 import { fetch } from "@/shared/net"
-import { resolveOpengatesModel } from "@/shared/opengates-models"
+import { getOpengatesModelInfo, OPENGATES_MAX_OUTPUT_TOKENS, resolveOpengatesModel } from "@/shared/opengates-models"
 import type { Mode } from "@/shared/storage/types"
 import { OpengatesAuthService } from "./opengates-auth-service"
+import { sanitizeOpengatesFailure } from "./opengates-error"
 import type { OpengatesTaskCorrelation } from "./opengates-task-budget"
 
 export const OPENGATES_API_BASE_URL = "https://ola-pilot-api.proudglacier-876118b2.eastus2.azurecontainerapps.io/v1"
@@ -48,7 +49,20 @@ export function createOpengatesFetch(
 				headers.set("X-Ola-Session-Id", taskCorrelation.taskId)
 				if (taskCorrelation.enabled) headers.set("X-Ola-Agent-Task-Id", taskCorrelation.taskId)
 			}
-			return baseFetch(new Request(request.clone(), { headers, redirect: "error" }))
+			try {
+				return await baseFetch(new Request(request.clone(), { headers, redirect: "error" }))
+			} catch {
+				request.signal.throwIfAborted()
+				throw new Error(
+					JSON.stringify({
+						source: "ola",
+						code: "connection_interrupted",
+						status: 0,
+						message:
+							"The connection to Ola was interrupted. The request was not automatically retried. Please check your connection.",
+					}),
+				)
+			}
 		}
 		const token = await auth.getAccessToken()
 		let response = await send(token)
@@ -59,7 +73,7 @@ export function createOpengatesFetch(
 			response = await send(refreshed)
 			if (response.status === 401) await auth.logout()
 		}
-		return response
+		return response.ok ? response : sanitizeOpengatesFailure(response)
 	}
 	const baseFetchWithPreconnect = baseFetch as FetchWithOptionalPreconnect
 	return Object.assign(authenticatedFetch, {
@@ -77,9 +91,13 @@ export function getOpengatesProviderConfig(
 ): ProviderConfig | undefined {
 	const auth = OpengatesAuthService.get()
 	if (!auth) return undefined
+	const modelId = resolveOpengatesModel(config, mode)
 	return {
 		providerId: "openai-compatible",
-		modelId: resolveOpengatesModel(config, mode),
+		modelId,
+		knownModels: { [modelId]: getOpengatesModelInfo(modelId) },
+		maxOutputTokens: OPENGATES_MAX_OUTPUT_TOKENS,
+		retryOwner: "upstream",
 		baseUrl: OPENGATES_API_BASE_URL,
 		// Actual credentials are resolved by fetch, never serialized into SDK session configuration.
 		apiKey: "opengates-session",

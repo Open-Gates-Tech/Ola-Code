@@ -1630,6 +1630,33 @@ describe("AgentRuntime", () => {
 		);
 	});
 
+	it("does not replay a partial stream mislabeled as a context overflow", async () => {
+		const model = new ScriptedModel([
+			() => [
+				{ type: "text-delta", text: "partial response" },
+				{
+					type: "finish",
+					reason: "error",
+					error: "context_length_exceeded",
+					errorClass: "context_window_exceeded",
+				},
+			],
+		]);
+		const prepareTurn = vi.fn(async () => undefined);
+		const runtime = new AgentRuntime({ model, prepareTurn });
+		const result = await runtime.run("Keep my conversation.");
+		expect(result.status).toBe("failed");
+		expect(model.requests).toHaveLength(1);
+		expect(prepareTurn).toHaveBeenCalledTimes(1);
+		expect(
+			result.messages.some((message) =>
+				message.content.some(
+					(part) => part.type === "text" && part.text === "partial response",
+				),
+			),
+		).toBe(true);
+	});
+
 	it("recovers from an unclassified overflow by classifying the finish message", async () => {
 		// Models that do not classify at their own error boundary (custom
 		// AgentModel implementations, adapters carrying only a flattened

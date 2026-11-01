@@ -88,6 +88,8 @@ export interface AuthConfig {
  * Endpoint configuration
  */
 export interface EndpointConfig {
+	/** Upstream gateways may own retries; never replay their ambiguous failures. */
+	retryOwner?: "sdk" | "upstream";
 	/** Base URL for the API */
 	baseUrl?: string;
 	/** Custom headers to include */

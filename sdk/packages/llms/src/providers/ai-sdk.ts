@@ -2044,7 +2044,11 @@ async function* emitAiSdkEvents(
 		...(finishRequestId ? { requestId: finishRequestId } : {}),
 		error: streamError?.message,
 		errorClass: streamError?.errorClass,
-		errorRetryable: streamError?.retryable,
+		errorRetryable: streamError
+			? context.config.options?.retryOwner === "upstream"
+				? false
+				: streamError.retryable
+			: undefined,
 		errorReported: streamError?.reported,
 	};
 }
@@ -2170,6 +2174,7 @@ function createAiSdkProvider(
 ): GatewayProviderFactory {
 	return async (config) => ({
 		async *stream(request, context) {
+			const upstreamOwnsRetries = config.options?.retryOwner === "upstream";
 			// Multi-protocol HTTP gateways declare model adapters in models.dev.
 			// Keep native and local CLI transports authoritative for their models.
 			const kind = resolveModelProviderKind(defaultKind, context);
@@ -2185,6 +2190,7 @@ function createAiSdkProvider(
 				captured: CapturedStreamError,
 				operation = "provider.stream",
 			) => {
+				if (upstreamOwnsRetries) captured.retryable = false;
 				if (reportedError === captured) return;
 				// Explicit user/steering cancellation is not a provider failure.
 				if (
@@ -2213,7 +2219,14 @@ function createAiSdkProvider(
 					log.error("[ai-sdk] provider error", {
 						...correlation,
 						providerId: request.providerId,
-						error: captured.error,
+						error: upstreamOwnsRetries
+							? {
+									message: captured.baseMessage,
+									errorClass: captured.errorClass,
+									phase: captured.phase,
+									requestId: captured.requestId,
+								}
+							: captured.error,
 						severity: "error",
 					});
 				} else {
@@ -2436,14 +2449,14 @@ function createAiSdkProvider(
 						streamText({
 							model: withEmptyResponseRetry(
 								provider.operations.language(context.model.id),
-								provider.retryEmptyResponses,
+								upstreamOwnsRetries ? false : provider.retryEmptyResponses,
 								context.logger,
 							) as never,
 							messages: messages as never,
 							...(useSystemOption ? { system: systemPrompt } : {}),
 							...(tools ? { tools } : {}),
 							abortSignal: request.signal,
-							maxRetries: MODEL_REQUEST_MAX_RETRIES,
+							maxRetries: upstreamOwnsRetries ? 0 : MODEL_REQUEST_MAX_RETRIES,
 							experimental_repairToolCall: repairMalformedToolCall as never,
 							telemetry: {
 								...aiSdkTelemetry,
@@ -2472,7 +2485,7 @@ function createAiSdkProvider(
 								? { stopWhen: stepCountIs(8) }
 								: {}),
 							...requestConfig,
-							streamRetries: MODEL_STREAM_MAX_RETRIES,
+							streamRetries: upstreamOwnsRetries ? 0 : MODEL_STREAM_MAX_RETRIES,
 							...(portableReasoning ? { reasoning: portableReasoning } : {}),
 							onLanguageModelCallStart: () => {
 								capturedError.current = undefined;

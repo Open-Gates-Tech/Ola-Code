@@ -54,6 +54,7 @@ import {
 } from "../services/error/ClineError"
 import { classifyCommandOutcome } from "./command-outcome"
 import { MessageIdMinter } from "./message-id-minter"
+import { parseOpengatesFailure } from "./opengates-error"
 import { describeCredentialRejectedError, describeMissingCredentialError } from "./provider-credential-error"
 import { extractPersistedHookContextChips, isSyntheticSdkUserMessage, isSyntheticUserPrompt } from "./sdk-user-message-mapping"
 import { isDeniedToolApprovalMistake, isKnownToolApprovalDenial } from "./tool-approval-denial"
@@ -2739,6 +2740,8 @@ export function reshapeErrorForWebview(
 	// provider when the active provider id is unknown.
 	const clineErrorProviderId = providerId ?? "cline"
 	const rawMessage = error.message ?? "Unknown error"
+	const olaFailure = parseOpengatesFailure(rawMessage)
+	if (olaFailure) return JSON.stringify(olaFailure)
 
 	// A retired cline-free/ model answers "model not found" once its free
 	// promotion ends and the id is removed from the catalog. Stamp the payload

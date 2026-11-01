@@ -34,6 +34,7 @@ export interface CompactSessionMessagesInput {
 	sessionId: string
 	/** The conversation transcript to compact (SDK message shape). */
 	messages: SdkMessage[]
+	abortSignal?: AbortSignal
 	/**
 	 * Receives the SDK's compaction status notices (started/completed/skipped
 	 * with token + message counters) so the caller can drive progress UI.
@@ -54,6 +55,7 @@ export interface CompactSessionMessagesResult {
  * nothing to compact or the configured strategy declines to compact.
  */
 export async function compactSessionMessages(input: CompactSessionMessagesInput): Promise<CompactSessionMessagesResult> {
+	input.abortSignal?.throwIfAborted()
 	if (input.messages.length === 0) {
 		return { compacted: false, messages: input.messages }
 	}
@@ -101,7 +103,7 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 		iteration: 0,
 		messages: input.messages,
 		apiMessages: input.messages,
-		abortSignal: new AbortController().signal,
+		abortSignal: input.abortSignal ?? new AbortController().signal,
 		systemPrompt: "",
 		tools: [],
 		model: {
@@ -111,6 +113,7 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 		},
 		emitStatusNotice: input.emitStatusNotice,
 	})
+	input.abortSignal?.throwIfAborted()
 	if (!result) {
 		return { compacted: false, messages: input.messages }
 	}

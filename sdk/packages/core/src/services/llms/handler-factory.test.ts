@@ -123,6 +123,7 @@ describe("createAgentModelFromConfig", () => {
 					providerId: "openai-compatible",
 					modelId: "mock-model",
 					fetch: hostFetch,
+					retryOwner: "upstream",
 				},
 			},
 			undefined,
@@ -135,6 +136,7 @@ describe("createAgentModelFromConfig", () => {
 					expect.objectContaining({
 						providerId: "openai-compatible",
 						fetch: hostFetch,
+						options: expect.objectContaining({ retryOwner: "upstream" }),
 					}),
 				],
 			}),

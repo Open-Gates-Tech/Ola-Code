@@ -15,13 +15,6 @@ const PLAN_CONTRACT = [
 	{ tier: "ultra_plus", name: "Ultra Plus", price: 30, sparks: "30,000,000" },
 ]
 
-const STATES: Record<string, string> = {
-	pending: "Pending settlement",
-	settled: "Settled",
-	uncharged_unknown: "Usage unknown - not charged",
-	interrupted: "Interrupted - measured usage charged",
-}
-
 export function SparksUsage({ account }: { account: OpengatesAccount }) {
 	const [checkout, setCheckout] = useState<string | null>(null)
 	const [error, setError] = useState<string | null>(null)
@@ -135,75 +128,6 @@ export function SparksUsage({ account }: { account: OpengatesAccount }) {
 							{error}
 						</p>
 					)}
-				</div>
-			</details>
-			<details>
-				<summary className="cursor-pointer text-xs font-semibold">Recent model calls and token diagnostics</summary>
-				<div className="mt-3 flex flex-col gap-2">
-					{account.sparksCalls.length === 0 && (
-						<p className="m-0 text-xs text-description">No model calls in this wallet yet.</p>
-					)}
-					{account.sparksCalls.map((call) => (
-						<details className="ola-account-card text-xs" key={call.id}>
-							<summary className="cursor-pointer">
-								{call.model} -{" "}
-								{call.state === "pending"
-									? `${formatSparks(call.heldNusd)} Sparks held`
-									: `${formatSparks(call.debitNusd)} Sparks`}
-								<span className="mt-1 block text-[11px] text-description">
-									{STATES[call.state] ?? call.state}
-								</span>
-							</summary>
-							<dl className="ola-account-facts mt-2">
-								<div>
-									<dt>Input tokens</dt>
-									<dd>
-										{call.state === "pending" || call.state === "uncharged_unknown"
-											? "Not reported"
-											: call.promptTokens.toLocaleString()}
-									</dd>
-								</div>
-								<div>
-									<dt>Cached input (included)</dt>
-									<dd>
-										{call.state === "pending" || call.state === "uncharged_unknown"
-											? "Not reported"
-											: call.cachedTokens.toLocaleString()}
-									</dd>
-								</div>
-								<div>
-									<dt>Cache-write input (included)</dt>
-									<dd>
-										{call.state === "pending" || call.state === "uncharged_unknown"
-											? "Not reported"
-											: call.cacheWriteTokens.toLocaleString()}
-									</dd>
-								</div>
-								<div>
-									<dt>Output tokens</dt>
-									<dd>
-										{call.state === "pending" || call.state === "uncharged_unknown"
-											? "Not reported"
-											: call.completionTokens.toLocaleString()}
-									</dd>
-								</div>
-								<div>
-									<dt>Role / outcome</dt>
-									<dd>
-										{call.role || "Generation"} / {call.outcome || "Pending"}
-									</dd>
-								</div>
-								<div>
-									<dt>Time</dt>
-									<dd>{new Date(call.timestamp).toLocaleString()}</dd>
-								</div>
-							</dl>
-							<p className="mb-0 break-all text-[10px] text-description">
-								Request: {call.id}
-								{call.parent ? `; parent: ${call.parent}` : ""}
-							</p>
-						</details>
-					))}
 				</div>
 			</details>
 		</div>

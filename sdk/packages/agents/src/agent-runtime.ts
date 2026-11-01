@@ -1494,10 +1494,12 @@ export class AgentRuntime {
 		) {
 			return false;
 		}
-		// An errored stream that still produced tool calls proceeds through the
-		// normal loop (matching existing behavior); a retry would discard that
-		// partial work.
-		return !turn.message.content.some((part) => part.type === "tool-call");
+		// Only a definitive rejection before output or tool activity is safe to
+		// reissue. Even a misclassified overflow must not replay a partial stream.
+		return (
+			turn.message.content.length === 0 &&
+			!this.hasModelToolActivity(turn.message)
+		);
 	}
 
 	private isRecoverableMaxTokensTurn(turn: {

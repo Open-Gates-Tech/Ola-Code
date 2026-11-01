@@ -785,6 +785,30 @@ describe("useMessageHandlers — send routing", () => {
 		expect(condense).not.toHaveBeenCalled()
 	})
 
+	it("allows manual compaction after a definitive context rejection without sending another model request", async () => {
+		mockTurnState = { phase: "error", anchorTs: 2, seq: 4 }
+		const failedConversation: ClineMessage[] = [
+			{ ts: 1, type: "say", say: "task", text: "task" },
+			{
+				ts: 2,
+				type: "ask",
+				ask: "api_req_failed",
+				text: JSON.stringify({
+					source: "ola",
+					code: "context_length_exceeded",
+					status: 400,
+					message: "Compact using /compact.",
+				}),
+			},
+		]
+		const { result } = renderHook(() => useMessageHandlers(failedConversation, makeChatState(failedConversation)))
+		await act(async () => {
+			expect(await result.current.compactTask()).toBe(true)
+		})
+		expect(condense).toHaveBeenCalledTimes(1)
+		expect(askResponse).not.toHaveBeenCalled()
+	})
+
 	it("keeps a typed /compact in the composer during API error recovery instead of sending it as text", async () => {
 		mockTurnState = { phase: "error", anchorTs: 2, seq: 4 }
 		const failedConversation: ClineMessage[] = [

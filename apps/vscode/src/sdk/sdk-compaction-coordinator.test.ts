@@ -111,6 +111,20 @@ describe("SdkCompactionCoordinator", () => {
 		expect(activeSession.sdkHost.updateSessionCompactionState).toHaveBeenCalled()
 	})
 
+	it("cancels summarization without persisting a replacement sidecar", async () => {
+		const activeSession = makeActiveSession()
+		const { coordinator, options } = makeCoordinator({ activeSession })
+		mockCreateContextCompactionPrepareTurn.mockReturnValueOnce(
+			vi.fn(async () => {
+				coordinator.cancel()
+				return { messages: [{ role: "user", content: "summary" }] }
+			}),
+		)
+		await coordinator.compactTask()
+		expect(activeSession.sdkHost.updateSessionCompactionState).not.toHaveBeenCalled()
+		expect(compactionRows(options).at(-1)?.info.status).toBe("failed")
+	})
+
 	it("does not compact a different session installed while waiting for the mutex", async () => {
 		const activeSession = makeActiveSession()
 		const replacementSession = makeActiveSession({ sessionId: "different-task" })

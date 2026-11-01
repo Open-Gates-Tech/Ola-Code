@@ -37,8 +37,9 @@ describe("Sparks wallet UI", () => {
 		expect(screen.getByText("0.001 Sparks")).toBeInTheDocument()
 		expect(screen.queryByText("Thinking & Pro")).not.toBeInTheDocument()
 		expect(screen.getByText("Ultra Plus")).toBeInTheDocument()
-		expect(screen.getByText("Usage unknown - not charged")).toBeInTheDocument()
-		expect(screen.getAllByText("Not reported")).toHaveLength(4)
+		expect(screen.queryByText("Recent model calls and token diagnostics")).not.toBeInTheDocument()
+		expect(screen.queryByText("Input tokens")).not.toBeInTheDocument()
+		expect(screen.queryByText("mini")).not.toBeInTheDocument()
 		expect(screen.queryByText(/\$.*model-cost/)).not.toBeInTheDocument()
 	})
 	it("selects a catalog product rather than always starting a Pro checkout", async () => {

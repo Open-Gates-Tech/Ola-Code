@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.3] (Preview)
+
+- Keep coding through eligible model failures with internal, bounded recovery.
+- Improve automatic conversation compaction and preserve recent tool state when
+  resuming long sessions.
+- Avoid duplicate generation retries and show clearer recovery guidance.
+- Keep each task on one model so repeated context is served from the
+  provider's cache, making Sparks last longer on long agent tasks.
+- Simplify the Sparks account view by removing recent model-call and token
+  diagnostics. Balance, held Sparks, reset dates and plans remain available.
+
 ## 0.1.1 (Preview)
 
 - Isolate Ola Code's commands, sidebar, icons, context keys, walkthrough, review

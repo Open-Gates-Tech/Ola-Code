@@ -246,6 +246,11 @@ describe("Opengates gateway requests", () => {
 			modelId: "ola-code-reason",
 			providerId: "openai-compatible",
 			baseUrl: OPENGATES_API_BASE_URL,
+			retryOwner: "upstream",
+			maxOutputTokens: 8192,
+			knownModels: {
+				"ola-code-reason": { contextWindow: 200_000, maxInputTokens: 175_424, maxTokens: 8192 },
+			},
 		})
 		expect(getOpengatesProviderConfig({ planModeOpenAiModelId: "ola-code-reason" }, "plan")?.modelId).toBe("ola-code-reason")
 	})
@@ -334,6 +339,7 @@ describe("Opengates gateway requests", () => {
 		const retry = baseFetch.mock.calls[1][0] as Request
 		expect(retry.headers.get("authorization")).toBe("Bearer refreshed")
 		expect(await retry.text()).toBe("request-body")
+		expect(retry.headers.get("Idempotency-Key")).toBe((baseFetch.mock.calls[0][0] as Request).headers.get("Idempotency-Key"))
 	})
 
 	it("signs out if a refreshed token is rejected", async () => {
@@ -344,6 +350,17 @@ describe("Opengates gateway requests", () => {
 		expect(response.status).toBe(401)
 		expect(baseFetch).toHaveBeenCalledTimes(2)
 		expect(storage.has(OPENGATES_SESSION_KEY)).toBe(false)
+	})
+
+	it("never replays an ambiguous disconnect and hides raw transport details", async () => {
+		const { auth } = await signedIn()
+		const baseFetch = vi.fn<typeof globalThis.fetch>().mockRejectedValue(new Error("SECRET endpoint and credentials"))
+		const pending = createOpengatesFetch(auth, baseFetch)(`${OPENGATES_API_BASE_URL}/chat/completions`, {
+			method: "POST",
+		})
+		await expect(pending).rejects.toThrow("connection_interrupted")
+		expect(baseFetch).toHaveBeenCalledTimes(1)
+		await expect(pending).rejects.not.toThrow("SECRET")
 	})
 
 	it.each([403, 429, 500])("does not refresh or sign out for HTTP %s", async (status) => {

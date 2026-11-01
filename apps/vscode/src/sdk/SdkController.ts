@@ -1589,6 +1589,7 @@ export class Controller {
 	}
 
 	async cancelTask(): Promise<void> {
+		this.compaction.cancel()
 		// Fence first: mark resumable and invalidate provisioning before any abort await,
 		// so straggler work cannot restore the cancelled turn's streaming state.
 		this.turnStateTracker.set("resumable")

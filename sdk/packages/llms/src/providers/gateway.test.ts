@@ -2838,6 +2838,7 @@ describe("sdk-gateway", () => {
 		const gateway = createGateway({
 			providerConfigs: [{ providerId: "openai-native", apiKey: "test" }],
 		});
+
 		const events = await collect(
 			await gateway.stream({
 				providerId: "openai-native",
@@ -2852,6 +2853,55 @@ describe("sdk-gateway", () => {
 			reason: "error",
 			errorRetryable: false,
 		});
+	});
+
+	it.each([
+		"request_start",
+		"stream_read",
+	])("lets upstream own retries for %s failures", async (phase) => {
+		const error = Object.assign(new Error("ambiguous disconnect"), {
+			isRetryable: true,
+			requestBodyValues: { messages: "PRIVATE_PROMPT" },
+		});
+		const logger = { error: vi.fn(), log: vi.fn() };
+		streamTextSpy.mockImplementation(() => {
+			if (phase === "request_start") throw error;
+			return {
+				fullStream: (async function* () {
+					yield { type: "text-delta", text: "partial" };
+					throw error;
+				})(),
+			};
+		});
+		const gateway = createGateway({
+			logger,
+			providerConfigs: [
+				{
+					providerId: "openai-native",
+					apiKey: "test",
+					options: { retryOwner: "upstream" },
+				},
+			],
+		});
+		const events = await collect(
+			await gateway.stream({
+				providerId: "openai-native",
+				modelId: "gpt-5-mini",
+				messages: baseMessages,
+			}),
+		);
+		expect(streamTextSpy).toHaveBeenCalledTimes(1);
+		expect(streamTextSpy.mock.calls.at(-1)?.[0]).toMatchObject({
+			maxRetries: 0,
+			streamRetries: 0,
+		});
+		expect(events.at(-1)).toMatchObject({
+			reason: "error",
+			errorRetryable: false,
+		});
+		expect(JSON.stringify(logger.error.mock.calls)).not.toContain(
+			"PRIVATE_PROMPT",
+		);
 	});
 
 	it("records the extracted provider message for AI SDK stream errors", async () => {

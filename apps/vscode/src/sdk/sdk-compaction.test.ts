@@ -39,6 +39,27 @@ describe("compactSessionMessages", () => {
 		expect(createContextCompactionPrepareTurn).not.toHaveBeenCalled()
 	})
 
+	it("does not create durable state when cancelled during summarization", async () => {
+		const controller = new AbortController()
+		const messages = [{ role: "user" as const, content: "original" }]
+		createContextCompactionPrepareTurn.mockReturnValueOnce(
+			vi.fn(async () => {
+				controller.abort()
+				return { messages: [{ role: "user", content: "summary" }] }
+			}),
+		)
+		await expect(
+			compactSessionMessages({
+				config: baseConfig,
+				sessionId: "cancelled",
+				messages,
+				abortSignal: controller.signal,
+			}),
+		).rejects.toThrow()
+		expect(createSessionCompactionState).not.toHaveBeenCalled()
+		expect(messages).toEqual([{ role: "user", content: "original" }])
+	})
+
 	it("builds a manual-mode prepareTurn and force-enables compaction", async () => {
 		const compact = vi
 			.fn()

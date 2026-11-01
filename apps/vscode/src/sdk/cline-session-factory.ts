@@ -1078,6 +1078,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	const committedRuntimeModel = resolveCommittedRuntimeModel(providerId, mode, modelId)
 	const overriddenMaxTokens = committedRuntimeModel?.overrides?.maxTokens
 	const maxTokensPerTurn =
+		opengates?.maxOutputTokens ??
 		positiveFiniteNumber(overriddenMaxTokens) ??
 		(providerId === "openai" ? resolveOpenAiCompatibleMaxTokens(apiConfig, mode) : undefined)
 	const temperature = nonNegativeFiniteNumber(committedRuntimeModel?.overrides?.temperature)
@@ -1169,6 +1170,10 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		}
 	} catch (error) {
 		Logger.warn(`[SessionFactory] Failed to resolve known models for provider=${sdkProviderId}:`, error)
+	}
+	if (opengates) {
+		// Gateway aliases are contracts, not user-editable public model facts.
+		knownModels = opengates.knownModels
 	}
 
 	// Always pass a providerConfig so the proxy/CA-aware fetch reaches the SDK

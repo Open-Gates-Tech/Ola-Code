@@ -122,6 +122,23 @@ describe("ErrorRow", () => {
 	})
 
 	describe("API error handling", () => {
+		it("shows safe Ola guidance and request ID without provider or risk diagnostics", async () => {
+			const { ClineError } = await import("../../../../src/services/error/ClineError")
+			vi.mocked(ClineError.parse).mockReturnValue({
+				message: "Ola is temporarily paused. Try again in 12 seconds.",
+				isErrorType: vi.fn(),
+				_error: {
+					source: "ola",
+					code: "provider_risk_limit_exceeded",
+					providerId: "openai-compatible",
+					request_id: "req-123",
+				},
+			} as any)
+			render(<ErrorRow apiRequestFailedMessage="safe payload" errorType="error" message={mockMessage} />)
+			expect(screen.getByText("Ola is temporarily paused. Try again in 12 seconds.")).toBeInTheDocument()
+			expect(screen.getByText("Request ID: req-123")).toBeInTheDocument()
+			expect(screen.queryByText(/openai-compatible|provider_risk_limit_exceeded/)).not.toBeInTheDocument()
+		})
 		it("renders credit limit error when balance error is detected", async () => {
 			const mockClineError = {
 				message: "Insufficient credits",

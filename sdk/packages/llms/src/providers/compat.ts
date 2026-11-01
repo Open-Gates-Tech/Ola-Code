@@ -502,6 +502,7 @@ function buildGatewayConfig(config: ProviderConfig) {
 		defaultModelId: config.modelId,
 		models: buildGatewayModels(providerId, config),
 		options: {
+			retryOwner: config.retryOwner,
 			region: config.region ?? config.gcp?.region,
 			project: config.gcp?.projectId,
 			projectId: config.gcp?.projectId,

@@ -59,6 +59,7 @@ export function isClineFreePromotionEndedMessage(message: string, modelId?: stri
 }
 
 interface ErrorDetails {
+	source?: string
 	/**
 	 * The HTTP status code of the error, if applicable.
 	 */

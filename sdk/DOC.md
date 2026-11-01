@@ -378,3 +378,13 @@ Pass `connectorsRequest: (path, init) => Promise<Response>` to `LocalRuntimeHost
 and `createLocalHubScheduleRuntimeHandlers` to supply connector authentication.
 Paths start with `/api/v1/connectors`; the host supplies the API origin and
 authentication. Omit it to retain local account authentication and rollout checks.
+## Gateway retry ownership
+
+`ProviderConfig.retryOwner` defaults to `"sdk"`. Set it to `"upstream"` when a
+gateway owns safe pre-stream recovery. Core and compatibility handlers forward
+the policy to the AI transport, which disables request-start retries, stream
+retries, empty-response retries, and the agent's transient whole-turn retry.
+This also applies to compaction summarizer requests using that connection.
+It does not disable the existing bounded context-overflow recovery: a definitive
+size rejection can compact once and issue a strictly smaller request. Ambiguous
+transport failures and partial streams are not automatically replayed.

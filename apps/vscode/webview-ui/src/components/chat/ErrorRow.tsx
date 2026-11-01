@@ -47,6 +47,14 @@ const ErrorRow = memo((props: ErrorRowProps) => {
 					// and login prompts below.
 					const isClineUsageBillingProvider = providerId === "cline"
 					const errorCode = clineError?._error?.code
+					if (clineError?._error?.source === "ola") {
+						return (
+							<div className="whitespace-pre-wrap text-error wrap-anywhere">
+								{errorMessage}
+								{requestId && <div>Request ID: {requestId}</div>}
+							</div>
+						)
+					}
 
 					if (clineError?.isErrorType(ClineErrorType.Balance)) {
 						const errorDetails = clineError._error?.details

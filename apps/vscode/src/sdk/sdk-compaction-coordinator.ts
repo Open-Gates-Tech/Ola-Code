@@ -61,8 +61,13 @@ export interface SdkCompactionCoordinatorOptions {
 
 export class SdkCompactionCoordinator {
 	private compactInFlight = false
+	private abortController?: AbortController
 
 	constructor(private readonly options: SdkCompactionCoordinatorOptions) {}
+
+	cancel(): void {
+		this.abortController?.abort()
+	}
 
 	/**
 	 * Compact the displayed task's conversation. Mirrors the CLI's `/compact`
@@ -86,6 +91,7 @@ export class SdkCompactionCoordinator {
 			}
 
 			this.compactInFlight = true
+			this.abortController = new AbortController()
 			try {
 				// Hold the same boundary as idle follow-up sends so a follow-up
 				// cannot grow the transcript between this read/compact/persist
@@ -113,6 +119,7 @@ export class SdkCompactionCoordinator {
 				await this.options.postStateToWebview()
 			} finally {
 				this.compactInFlight = false
+				this.abortController = undefined
 			}
 			return
 		}
@@ -126,6 +133,7 @@ export class SdkCompactionCoordinator {
 		}
 
 		this.compactInFlight = true
+		this.abortController = new AbortController()
 		try {
 			await this.compactDisplayedTask(displayedTaskId)
 		} catch (error) {
@@ -134,6 +142,7 @@ export class SdkCompactionCoordinator {
 			await this.options.postStateToWebview()
 		} finally {
 			this.compactInFlight = false
+			this.abortController = undefined
 		}
 	}
 
@@ -227,6 +236,7 @@ export class SdkCompactionCoordinator {
 		let noticeInfo: ClineCompactionInfo | undefined
 		try {
 			const result = await compactSessionMessages({
+				abortSignal: this.abortController?.signal,
 				config: {
 					providerConfig: config.providerConfig,
 					providerId: config.providerId,
@@ -245,6 +255,7 @@ export class SdkCompactionCoordinator {
 					}
 				},
 			})
+			this.abortController?.signal.throwIfAborted()
 
 			if (!result.compacted) {
 				this.emitCompactionRow(noticeInfo ?? { status: "skipped", mode: "manual" }, compactionTs, sessionId)

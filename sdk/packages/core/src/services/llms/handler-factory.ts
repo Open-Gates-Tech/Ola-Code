@@ -38,6 +38,7 @@ function buildGatewayProviderOptions(
 	config: ProviderConfig,
 ): Record<string, unknown> | undefined {
 	const options: Record<string, unknown> = {
+		retryOwner: config.retryOwner,
 		region: config.region,
 		apiLine: config.apiLine,
 		openRouterProviderSorting: config.openRouterProviderSorting,

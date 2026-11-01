@@ -1,5 +1,36 @@
 # Ola Code for VS Code
 
+## Long conversations
+
+Automatic context compaction uses the SDK's working-context sidecar; saved
+conversation history is not replaced. Fast, Thinking, and Pro use a conservative
+200,000-token context contract, reserving 8,192 output tokens and 16,384 tokens
+for service-side additions. The SDK starts compaction at 90% of the remaining
+175,424-token input budget (including local system guidance and tool schemas).
+Switching modes refreshes the same metadata for both automatic and manual
+compaction. This is an estimate with safety margin, not exact tokenization.
+
+The service owns safe request recovery. The extension does not transparently
+retry service or transport failures; its authentication refresh remains a single
+401 retry with the same idempotency key. Definitive context rejections use the
+SDK's existing single, smaller-request compaction recovery. Manual `/compact`
+is available after a context error; Stop cancels summarization before a new
+sidecar is persisted. Failed or cancelled compaction leaves saved history intact.
+Public errors show actionable Ola guidance, request IDs, and retry timing without
+upstream details.
+
+Deterministic regression: `src/sdk/sdk-long-session.test.ts` feeds 60 mocked,
+tool-rich turns through the real SDK automatic compaction pipeline using the
+Ola budget. It crosses the actual 90% trigger five times (turns 13, 25, 36,
+46, and 55), persists and reloads the real sidecar after each crossing, and
+verifies all 120 canonical tool-call/result pairs remain intact. Resumed
+working context retains recent tool pairs, applied-edit metadata and approved
+state; an outstanding approval survives as an unexecuted canonical tail.
+Approval metadata is mocked; this does not exercise the live approval UI or
+a provider. Verified with
+`bun run test:vitest src/sdk/sdk-long-session.test.ts --maxWorkers 1 --testTimeout 120000`
+(one test passed, no credentials).
+
 ## Bounded live agent evaluation
 
 After `bun run build:sdk` at the monorepo root, run from this package:

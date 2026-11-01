@@ -94,7 +94,7 @@ Ola Code is built on Opengates' mission to democratize access to world-class sof
 
 1,000,000 Sparks represents USD 1 of model-cost capacity, not a cash balance. Actual input, cached input, cache-write and output usage consume Sparks at the selected model's published rates. Holds are temporary reservations, not charges. Included Sparks expire at the monthly reset; purchased Sparks survive it and are consumed after included Sparks. Measured interrupted calls remain chargeable; unknown usage is not charged. Ola covers external tool and search costs.
 
-The account panel shows available, included, purchased and held Sparks, the next reset, and expandable recent-call token diagnostics. It refreshes while open. Wallet UI appears only when the server supplies a real versioned wallet; older servers retain their explicitly labelled legacy token meters. New subscription prices are USD-only; checkout stays unavailable until USD collection is verified, and payment channels are confirmed by the payment provider rather than promised here.
+The account panel shows available, included, purchased and held Sparks and the next reset. It refreshes while open. Wallet UI appears only when the server supplies a real versioned wallet; older servers retain their explicitly labelled legacy token meters. New subscription prices are USD-only; checkout stays unavailable until USD collection is verified, and payment channels are confirmed by the payment provider rather than promised here.
 
 ---
 

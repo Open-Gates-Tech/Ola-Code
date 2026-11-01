@@ -5,6 +5,7 @@ import { IntentEvent } from "@shared/proto/cline/ui"
 import { useCallback, useRef, useState } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { SlashServiceClient, TaskServiceClient, UiServiceClient } from "@/services/grpc-client"
+import { parseOpengatesFailure } from "../../../../../../src/sdk/opengates-error"
 import { buttonsForPhase, getTurnStateMessage } from "../shared/buttonConfig"
 import type { ButtonActionInvocation, ChatState, MessageHandlers } from "../types/chatTypes"
 
@@ -62,7 +63,11 @@ export function useMessageHandlers(messages: ClineMessage[], chatState: ChatStat
 		buttonsForPhase(turnState, getTurnStateMessage(messages, turnState)).primaryAction === "retry"
 			? turnState.seq
 			: undefined
-	const errorRecoveryAvailable = recoverySeq !== undefined
+	const recoveryMessage = getTurnStateMessage(messages, turnState) ?? lastMessage
+	const contextFailure =
+		recoveryMessage?.ask === "api_req_failed" &&
+		parseOpengatesFailure(recoveryMessage.text ?? "")?.code === "context_length_exceeded"
+	const errorRecoveryAvailable = recoverySeq !== undefined && !contextFailure
 	const recoveryActionInFlight = recoverySeq !== undefined && claimedRecoverySeq === recoverySeq
 	const claimErrorRecovery = useCallback(() => {
 		if (recoverySeq === undefined) {
@@ -89,9 +94,14 @@ export function useMessageHandlers(messages: ClineMessage[], chatState: ChatStat
 		if (errorRecoveryAvailable) {
 			return false
 		}
-		await SlashServiceClient.condense(StringRequest.create({ value: "compact" }))
-		return true
-	}, [errorRecoveryAvailable])
+		if (!claimErrorRecovery()) return false
+		try {
+			await SlashServiceClient.condense(StringRequest.create({ value: "compact" }))
+			return true
+		} finally {
+			releaseErrorRecoveryClaim()
+		}
+	}, [errorRecoveryAvailable, claimErrorRecovery, releaseErrorRecoveryClaim])
 
 	// Handle sending a message
 	const handleSendMessage = useCallback(
