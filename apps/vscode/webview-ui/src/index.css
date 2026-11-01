@@ -70,6 +70,28 @@
 	}
 }
 
+/*
+ * Ola brand blue for buttons, focus and the composer, whatever the editor theme.
+ * VS Code sets --vscode-* inline on <html>, so these are declared on body; the
+ * webview toolkit reads its button tokens from body's computed style.
+ */
+body,
+.dark {
+	--ola-brand: #1976d2;
+	--ola-brand-hover: #1565c0;
+	--ola-brand-foreground: #ffffff;
+	--vscode-button-background: var(--ola-brand);
+	--vscode-button-hoverBackground: var(--ola-brand-hover);
+	--vscode-button-foreground: var(--ola-brand-foreground);
+	--vscode-button-secondaryBackground: color-mix(in srgb, var(--ola-brand) 18%, transparent);
+	--vscode-button-secondaryHoverBackground: color-mix(in srgb, var(--ola-brand) 30%, transparent);
+	--vscode-button-secondaryForeground: var(--vscode-foreground);
+	--vscode-focusBorder: var(--ola-brand);
+	--primary: var(--ola-brand);
+	--primary-foreground: var(--ola-brand-foreground);
+	--ring: var(--ola-brand);
+}
+
 /* Ola Code: Copilot-style compact chat surfaces */
 .ola-introduction {
 	width: 100%;
@@ -124,7 +146,7 @@
 	width: 16px;
 	height: 16px;
 	flex-shrink: 0;
-	color: var(--vscode-foreground);
+	color: var(--ola-brand);
 }
 
 .ola-thinking-track {
@@ -252,14 +274,21 @@
 
 .ola-composer {
 	margin: 4px 12px 12px;
-	border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, rgba(128, 128, 128, 0.35)));
+	border: 1px solid color-mix(in srgb, var(--ola-brand) 55%, transparent);
 	border-radius: 16px;
 	background-color: var(--vscode-input-background);
 	transition: border-color 0.1s ease-in-out;
 }
 
 .ola-composer:focus-within {
-	border-color: var(--vscode-focusBorder);
+	border-color: var(--ola-brand);
+}
+
+/* Composer controls: send, add-context and attach icons, and the model picker. */
+.ola-composer .input-icon-button,
+.ola-composer vscode-button[appearance="icon"],
+.ola-composer .ola-model-trigger {
+	color: var(--ola-brand);
 }
 
 .ola-composer:has(+ .ola-composer-footer) {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.4] (Preview)
+
+- Use Ola blue (#1976d2) for buttons, the Plan/Agent switch, the chat input box and
+  its controls, and the thinking indicator, regardless of the editor theme.
+
 ## [0.1.3] (Preview)
 
 - Keep coding through eligible model failures with internal, bounded recovery.
