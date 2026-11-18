@@ -217,7 +217,7 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 						{loadError}
 					</p>
 				) : account?.sparks ? (
-					<SparksUsage account={account} />
+					<SparksUsage account={account} onChanged={() => void load()} />
 				) : account ? (
 					<>
 						<UsageMeter allowance={account.fastLimit} label="Fast" remaining={account.fastRemaining} />

@@ -8,10 +8,12 @@ import {
 	OpengatesSparksBundle,
 	OpengatesSparksCall,
 	OpengatesSparksWallet,
+	OpengatesSubscriptionStatus,
 } from "@/shared/proto/cline/account"
 import { Logger } from "@/shared/services/Logger"
 import type { OpengatesAuthService } from "./opengates-auth-service"
 import { createOpengatesFetch, OPENGATES_API_BASE_URL } from "./opengates-provider"
+import { subscriptionSchema, subscriptionStatus } from "./opengates-subscription"
 import { getOpengatesAgentTask } from "./opengates-task-budget"
 
 const exactAmount = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
@@ -103,6 +105,7 @@ const catalogSchema = z.object({
 	data: z.array(productSchema),
 	billing_enabled: z.boolean().optional(),
 	not_on_sale: z.array(z.string()).optional(),
+	subscribable: z.array(z.string()).optional(),
 })
 type CatalogProduct = z.infer<typeof productSchema>
 
@@ -112,7 +115,7 @@ function sparksProduct(p: CatalogProduct): boolean {
 	return p.bundle ? p.currency === "KES" && !p.tier : p.currency === "USD"
 }
 
-function toProduct(p: CatalogProduct, closed: string[]): OpengatesProduct {
+function toProduct(p: CatalogProduct, closed: string[], renewing: string[] = []): OpengatesProduct {
 	const b = p.bundle
 	return OpengatesProduct.create({
 		id: p.id,
@@ -121,6 +124,7 @@ function toProduct(p: CatalogProduct, closed: string[]): OpengatesProduct {
 		tier: p.tier,
 		billingVersion: p.billing_version,
 		onSale: !closed.includes(p.id),
+		subscribable: renewing.includes(p.id),
 		bundle: b
 			? OpengatesBundleOffer.create({
 					name: b.name,
@@ -174,9 +178,19 @@ export async function fetchOpengatesAccount(
 		try {
 			const catalog = await getJson(fetcher, "/billing/products", catalogSchema)
 			billingEnabled = catalog.billing_enabled === true
-			products = catalog.data.filter(sparksProduct).map((p) => toProduct(p, catalog.not_on_sale ?? []))
+			products = catalog.data
+				.filter(sparksProduct)
+				.map((p) => toProduct(p, catalog.not_on_sale ?? [], catalog.subscribable ?? []))
 		} catch (error) {
 			Logger.warn("Could not load Sparks plan catalog; checkout is unavailable.", error)
+		}
+	}
+	let subscription: OpengatesSubscriptionStatus | undefined
+	if (account.sparks) {
+		try {
+			subscription = subscriptionStatus(await getJson(fetcher, "/billing/subscription", subscriptionSchema))
+		} catch (error) {
+			Logger.warn("Could not load the Sparks subscription.", error)
 		}
 	}
 	let upgradeProduct: OpengatesProduct | undefined
@@ -240,6 +254,7 @@ export async function fetchOpengatesAccount(
 			) ?? [],
 		products,
 		billingEnabled,
+		subscription,
 		tier: account.tier,
 		status: account.status,
 		creditsRemaining: account.credits_remaining,
@@ -304,6 +319,7 @@ export async function createOpengatesPlanCheckout(
 	auth: OpengatesAuthService,
 	productId: string,
 	fetcher: typeof globalThis.fetch = createOpengatesFetch(auth),
+	subscribe = false,
 ): Promise<string> {
 	const email = (await auth.getUser())?.email
 	if (!email) throw new Error("Your Opengates account has no email address for checkout.")
@@ -312,11 +328,23 @@ export async function createOpengatesPlanCheckout(
 	if (!catalog.billing_enabled || !product) throw new Error("This Sparks plan or bundle is not available for checkout.")
 	if (catalog.not_on_sale?.includes(product.id))
 		throw new Error(`${product.bundle?.name ?? "This bundle"} is not sold at this hour.`)
+	if (subscribe && !catalog.subscribable?.includes(product.id))
+		throw new Error(`${product.bundle?.name ?? "This bundle"} cannot renew every month.`)
 	const checkout = await getJson(fetcher, "/billing/checkout", checkoutSchema, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ product_id: product.id, email }),
+		body: JSON.stringify(subscribe ? { product_id: product.id, email, subscribe: true } : { product_id: product.id, email }),
 	})
 	if (new URL(checkout.checkout_url).protocol !== "https:") throw new Error("Opengates returned an insecure checkout URL.")
 	return checkout.checkout_url
+}
+
+/** Cancels (false) or restarts (true) automatic renewal. Cancelling keeps what is already paid for. */
+export async function setOpengatesAutoRenew(
+	auth: OpengatesAuthService,
+	renew: boolean,
+	fetcher: typeof globalThis.fetch = createOpengatesFetch(auth),
+): Promise<void> {
+	// The change is made once Ola answers; the account view reloads the subscription itself.
+	await getJson(fetcher, `/billing/subscription/${renew ? "resume" : "cancel"}`, z.unknown(), { method: "POST" })
 }

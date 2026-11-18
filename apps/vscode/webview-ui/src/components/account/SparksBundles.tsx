@@ -9,10 +9,12 @@ type Props = {
 	/** The product whose checkout is opening, if any. */
 	checkout: string | null
 	onBuy: (productId: string) => void
+	/** Checkout for a monthly bundle that renews on the card it is paid with. */
+	onSubscribe?: (productId: string) => void
 }
 
 /** Bundles still running, then bundles and top-ups to buy, priced in KES with VAT included. */
-export function SparksBundles({ account, now, checkout, onBuy }: Props) {
+export function SparksBundles({ account, now, checkout, onBuy, onSubscribe }: Props) {
 	const wallet = account.sparks
 	if (!wallet) return null
 	const offers = account.products.filter((p) => p.bundle)
@@ -49,6 +51,16 @@ export function SparksBundles({ account, now, checkout, onBuy }: Props) {
 							? "Opening checkout..."
 							: `Buy for ${price}`}
 				</button>
+				{product.subscribable && onSubscribe && !closed && (
+					<button
+						aria-label={`Subscribe to ${offer.name} for ${price} a month`}
+						className="ola-pill-button self-start"
+						disabled={blocked}
+						onClick={() => onSubscribe(product.id)}
+						type="button">
+						{checkout === `${product.id}:monthly` ? "Opening checkout..." : "Renew every month (card)"}
+					</button>
+				)}
 			</div>
 		)
 	}

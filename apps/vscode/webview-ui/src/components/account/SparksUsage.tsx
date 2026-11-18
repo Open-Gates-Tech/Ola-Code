@@ -1,5 +1,5 @@
 import type { OpengatesAccount } from "@shared/proto/cline/account"
-import { StringRequest } from "@shared/proto/cline/common"
+import { BooleanRequest, StringRequest } from "@shared/proto/cline/common"
 import { useState } from "react"
 import { AccountServiceClient } from "@/services/grpc-client"
 import { SparksBundles } from "./SparksBundles"
@@ -10,16 +10,12 @@ export function formatSparks(nusd: number): string {
 	return sparksNumber.format(nusd / 1000)
 }
 
-const PLAN_CONTRACT = [
-	{ tier: "free", name: "Free", price: 0, sparks: "200,000" },
-	{ tier: "pro", name: "Pro", price: 5, sparks: "5,000,000" },
-	{ tier: "ultra", name: "Ultra", price: 15, sparks: "15,000,000" },
-	{ tier: "ultra_plus", name: "Ultra Plus", price: 30, sparks: "30,000,000" },
-]
+type Props = { account: OpengatesAccount; now?: Date; onChanged?: () => void }
 
-export function SparksUsage({ account, now = new Date() }: { account: OpengatesAccount; now?: Date }) {
+export function SparksUsage({ account, now = new Date(), onChanged }: Props) {
 	const [checkout, setCheckout] = useState<string | null>(null)
 	const [error, setError] = useState<string | null>(null)
+	const [renewing, setRenewing] = useState(false)
 	const wallet = account.sparks
 	if (!wallet) return null
 	const includedAvailable = wallet.grantNusd - wallet.usedNusd - wallet.heldNusd
@@ -27,11 +23,14 @@ export function SparksUsage({ account, now = new Date() }: { account: OpengatesA
 	const bundleAvailable = bundlesAvailable(wallet, now)
 	const held = wallet.heldNusd + wallet.purchasedHeldNusd
 	const percent = wallet.grantNusd > 0 ? Math.round((100 * includedAvailable) / wallet.grantNusd) : 0
-	const startCheckout = async (id: string) => {
-		setCheckout(id)
+	const startCheckout = async (id: string, subscribe = false) => {
+		setCheckout(subscribe ? `${id}:monthly` : id)
 		setError(null)
 		try {
-			await AccountServiceClient.startOpengatesPlanCheckout(StringRequest.create({ value: id }))
+			const request = StringRequest.create({ value: id })
+			await (subscribe
+				? AccountServiceClient.startOpengatesSubscription(request)
+				: AccountServiceClient.startOpengatesPlanCheckout(request))
 		} catch (cause) {
 			console.error("Could not start Sparks checkout:", cause)
 			setError("Could not start checkout. Refresh your account and try again.")
@@ -39,8 +38,40 @@ export function SparksUsage({ account, now = new Date() }: { account: OpengatesA
 			setCheckout(null)
 		}
 	}
+	const changeRenewal = async (renew: boolean) => {
+		setRenewing(true)
+		setError(null)
+		try {
+			await AccountServiceClient.setOpengatesAutoRenew(BooleanRequest.create({ value: renew }))
+			onChanged?.()
+		} catch (cause) {
+			console.error("Could not change renewal:", cause)
+			setError("That didn't go through. Refresh your account and try again.")
+		} finally {
+			setRenewing(false)
+		}
+	}
+	const subscription = account.subscription
 	return (
 		<div className="flex flex-col gap-4" data-testid="sparks-usage">
+			{subscription && (
+				<section
+					aria-label="Your subscription"
+					className="ola-account-card flex flex-col gap-1"
+					data-moving={subscription.moving || undefined}>
+					<span className="text-xs font-semibold">{subscription.title}</span>
+					<span className="text-xs text-description">{subscription.detail}</span>
+					{subscription.actionLabel && (
+						<button
+							className="ola-pill-button self-start"
+							disabled={renewing}
+							onClick={() => void changeRenewal(subscription.actionRenew)}
+							type="button">
+							{renewing ? "Saving..." : subscription.actionLabel}
+						</button>
+					)}
+				</section>
+			)}
 			<div>
 				<output aria-label="Available Sparks" className="block text-xl font-semibold">
 					{formatSparks(includedAvailable + purchasedAvailable + bundleAvailable)} Sparks
@@ -99,45 +130,16 @@ export function SparksUsage({ account, now = new Date() }: { account: OpengatesA
 					{error}
 				</p>
 			)}
-			<SparksBundles account={account} checkout={checkout} now={now} onBuy={(id) => void startCheckout(id)} />
-			<details>
-				<summary className="cursor-pointer text-xs font-semibold">Plans and monthly Sparks</summary>
-				<div className="mt-3 flex flex-col gap-2">
-					{PLAN_CONTRACT.map((plan) => {
-						const product = account.products.find((p) => p.tier === plan.tier && p.billingVersion === wallet.version)
-						const current = account.tier === plan.tier
-						return (
-							<div className="ola-account-card flex flex-col gap-1" key={plan.tier}>
-								<div className="flex justify-between text-xs font-semibold">
-									<span>
-										{plan.name}
-										{current ? " - current" : ""}
-									</span>
-									<span>{plan.price === 0 ? "Free" : `USD ${plan.price}/month`}</span>
-								</div>
-								<span className="text-xs text-description">{plan.sparks} included Sparks/month</span>
-								{product && !current && (
-									<button
-										className="ola-pill-button self-start"
-										disabled={!account.billingEnabled || checkout !== null || account.status !== "active"}
-										onClick={() => void startCheckout(product.id)}
-										type="button">
-										{checkout === product.id ? "Opening checkout..." : `Choose ${plan.name}`}
-									</button>
-								)}
-							</div>
-						)
-					})}
-					{!account.billingEnabled && (
-						<p className="m-0 text-xs text-description">
-							Checkout is currently unavailable. No payment will be taken here.
-						</p>
-					)}
-					<p className="m-0 text-[11px] text-description">
-						Subscriptions are priced in USD. Available payment channels and any conversion are confirmed at checkout.
-					</p>
-				</div>
-			</details>
+			<SparksBundles
+				account={account}
+				checkout={checkout}
+				now={now}
+				onBuy={(id) => void startCheckout(id)}
+				onSubscribe={(id) => void startCheckout(id, true)}
+			/>
+			{!account.billingEnabled && (
+				<p className="m-0 text-xs text-description">Checkout is currently unavailable. No payment will be taken here.</p>
+			)}
 		</div>
 	)
 }

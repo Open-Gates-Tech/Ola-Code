@@ -65,6 +65,12 @@ service AccountService {
   rpc startOpengatesUpgrade(EmptyRequest) returns (String);
 
   rpc startOpengatesPlanCheckout(StringRequest) returns (String);
+
+  // Starts a checkout for a monthly bundle that renews on the card it is paid with.
+  rpc startOpengatesSubscription(StringRequest) returns (String);
+
+  // Cancels (false) or restarts (true) automatic renewal of the subscription.
+  rpc setOpengatesAutoRenew(BooleanRequest) returns (Empty);
 }
 
 message OpengatesProduct {
@@ -79,6 +85,19 @@ message OpengatesProduct {
   optional OpengatesBundleOffer bundle = 7;
   // False while a bundle is not sold (Hadi Usiku after 9 PM East Africa Time).
   bool on_sale = 8;
+  // A monthly bundle that can renew every month on a card.
+  bool subscribable = 9;
+}
+
+// What the account view says about the person's subscription, worded by the extension.
+message OpengatesSubscriptionStatus {
+  string title = 1;
+  string detail = 2;
+  // Empty when there is nothing to do; action_renew says what the button does.
+  string action_label = 3;
+  bool action_renew = 4;
+  // A retired plan is about to move to a bundle.
+  bool moving = 5;
 }
 
 // How a bundle lasts: hours from purchase, until midnight, or a nightly window (East Africa Time).
@@ -119,6 +138,7 @@ message OpengatesAccount {
   repeated OpengatesSparksCall sparks_calls = 16;
   repeated OpengatesProduct products = 17;
   bool billing_enabled = 18;
+  optional OpengatesSubscriptionStatus subscription = 19;
 }
 
 message OpengatesSparksWallet {
