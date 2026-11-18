@@ -122,7 +122,7 @@ export function SparksUsage({ account, now = new Date(), onChanged }: Props) {
 			</dl>
 			<p className="m-0 text-[11px] text-description">
 				{wallet.daily
-					? "Bure refills every midnight and unused Bure does not carry over."
+					? "Bure pays for Quick and Balanced, refills every midnight, and does not carry over."
 					: "Monthly included Sparks expire at reset."}{" "}
 				Bundles last as long as their name says; top-ups never expire. Holds are not charges. Measured usage is charged
 				even if a call is interrupted; unknown usage is not charged. Web searches use Sparks too. Sparks represent usage
