@@ -44,6 +44,7 @@ const sparksSchema = z
 		period: z.string().min(1),
 		reset_at: z.string().datetime({ offset: true }),
 		bundles: z.array(bundleSchema).max(24).optional(),
+		daily: z.boolean().optional(),
 	})
 	.refine(
 		(w) =>
@@ -218,6 +219,7 @@ export async function fetchOpengatesAccount(
 					purchasedHeldNusd: account.sparks.purchased_held_nusd,
 					period: account.sparks.period,
 					resetAt: account.sparks.reset_at,
+					daily: account.sparks.daily ?? false,
 					bundles: (account.sparks.bundles ?? []).map((b) =>
 						OpengatesSparksBundle.create({
 							id: b.id,

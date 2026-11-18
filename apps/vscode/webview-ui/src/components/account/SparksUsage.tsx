@@ -82,11 +82,11 @@ export function SparksUsage({ account, now = new Date(), onChanged }: Props) {
 			</div>
 			<div className="ola-usage-meter">
 				<div className="flex justify-between text-xs">
-					<span>Monthly included</span>
+					<span>{wallet.daily ? "Bure today (free)" : "Monthly included"}</span>
 					<span>{percent}% available</span>
 				</div>
 				<div
-					aria-label="Monthly Sparks available"
+					aria-label={wallet.daily ? "Bure Sparks left today" : "Monthly Sparks available"}
 					aria-valuemax={100}
 					aria-valuemin={0}
 					aria-valuenow={percent}
@@ -116,14 +116,17 @@ export function SparksUsage({ account, now = new Date(), onChanged }: Props) {
 					<dd>{formatSparks(purchasedAvailable)} Sparks</dd>
 				</div>
 				<div>
-					<dt>Included resets</dt>
-					<dd>{new Date(wallet.resetAt).toLocaleString()}</dd>
+					<dt>{wallet.daily ? "Bure refills" : "Included resets"}</dt>
+					<dd>{wallet.daily ? "At midnight, East Africa Time" : new Date(wallet.resetAt).toLocaleString()}</dd>
 				</div>
 			</dl>
 			<p className="m-0 text-[11px] text-description">
-				Monthly included Sparks expire at reset. Bundles last as long as their name says; top-ups never expire. Holds are
-				not charges. Measured usage is charged even if a call is interrupted; unknown usage is not charged. Web searches
-				use Sparks too. Sparks represent usage capacity, not cash.
+				{wallet.daily
+					? "Bure refills every midnight and unused Bure does not carry over."
+					: "Monthly included Sparks expire at reset."}{" "}
+				Bundles last as long as their name says; top-ups never expire. Holds are not charges. Measured usage is charged
+				even if a call is interrupted; unknown usage is not charged. Web searches use Sparks too. Sparks represent usage
+				capacity, not cash.
 			</p>
 			{error && (
 				<p className="m-0 text-xs text-error" role="alert">

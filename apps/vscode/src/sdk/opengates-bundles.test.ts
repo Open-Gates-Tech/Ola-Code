@@ -76,6 +76,23 @@ function fetcherFor(checkout: (body: unknown) => Response = paystack) {
 }
 
 describe("Sparks bundles in Ola Code", () => {
+	it("carries Bure's daily flag through protobuf", async () => {
+		const daily = { ...wallet, daily: true }
+		const fetcher = vi.fn(async (input: Parameters<typeof fetch>[0]) =>
+			new URL(String(input)).pathname.endsWith("/account")
+				? Response.json({
+						tier: "free",
+						status: "active",
+						credits_remaining: 0,
+						fast_remaining: 0,
+						reason_remaining: 0,
+						sparks: daily,
+					})
+				: Response.json(catalog),
+		) as unknown as typeof fetch
+		const account = OpengatesAccount.decode(OpengatesAccount.encode(await fetchOpengatesAccount(auth, fetcher)).finish())
+		expect(account.sparks?.daily).toBe(true)
+	})
 	it("loads bundles, top-ups and wallet bundles through protobuf, skipping legacy products", async () => {
 		const account = OpengatesAccount.decode(OpengatesAccount.encode(await fetchOpengatesAccount(auth, fetcherFor())).finish())
 		expect(account.products.map((p) => p.id)).toEqual(["pro-sparks-usd", "siku", "hadi-usiku", "top-up-50"])
@@ -87,6 +104,7 @@ describe("Sparks bundles in Ola Code", () => {
 		})
 		expect(account.products[2]).toMatchObject({ onSale: false, bundle: { untilMidnight: true, sellUntilHour: 21 } })
 		expect(account.products[3].bundle?.topUp).toBe(true)
+		expect(account.sparks?.daily).toBe(false)
 		expect(account.sparks?.bundles).toHaveLength(2)
 		expect(account.sparks?.bundles[1]).toMatchObject({
 			product: "usiku",

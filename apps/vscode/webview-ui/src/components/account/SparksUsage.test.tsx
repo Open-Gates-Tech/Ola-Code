@@ -57,6 +57,18 @@ describe("Sparks wallet UI", () => {
 		expect(screen.queryByText("mini")).not.toBeInTheDocument()
 		expect(screen.queryByText(/\$.*model-cost/)).not.toBeInTheDocument()
 	})
+	it("shows Bure as free Sparks that refill at midnight", async () => {
+		mocks.getOpengatesAccount.mockResolvedValue({
+			...account,
+			tier: "free",
+			sparks: { ...account.sparks!, grantNusd: 25_000_000, daily: true },
+		})
+		render(<OpengatesAccountView user={user} />)
+		expect(await screen.findByText("Bure today (free)")).toBeInTheDocument()
+		expect(screen.getByText("At midnight, East Africa Time")).toBeInTheDocument()
+		expect(screen.getByLabelText("Bure Sparks left today")).toBeInTheDocument()
+		expect(screen.queryByText("Monthly included")).not.toBeInTheDocument()
+	})
 	it("subscribes to Mwezi on a card, and still buys it once", async () => {
 		render(<OpengatesAccountView user={user} />)
 		fireEvent.click(await screen.findByRole("button", { name: "Subscribe to Mwezi for KES 650 a month", hidden: true }))

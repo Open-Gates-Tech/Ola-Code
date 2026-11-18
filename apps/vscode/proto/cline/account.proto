@@ -153,6 +153,8 @@ message OpengatesSparksWallet {
   string reset_at = 9;
   // Bundles bought on their own, each with its own expiry; spent before the monthly Sparks.
   repeated OpengatesSparksBundle bundles = 10;
+  // Bure: the free plan's allowance refills every midnight, East Africa Time, instead of monthly.
+  bool daily = 11;
 }
 
 message OpengatesSparksBundle {
