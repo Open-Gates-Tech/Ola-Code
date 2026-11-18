@@ -75,6 +75,25 @@ message OpengatesProduct {
   int32 days = 4;
   string tier = 5;
   string billing_version = 6;
+  // Set for Sparks bundles and top-ups (priced in KES); plans have none.
+  optional OpengatesBundleOffer bundle = 7;
+  // False while a bundle is not sold (Hadi Usiku after 9 PM East Africa Time).
+  bool on_sale = 8;
+}
+
+// How a bundle lasts: hours from purchase, until midnight, or a nightly window (East Africa Time).
+// A top-up adds Sparks that never expire.
+message OpengatesBundleOffer {
+  string name = 1;
+  string label = 2;
+  int64 sparks = 3;
+  int32 hours = 4;
+  bool until_midnight = 5;
+  bool windowed = 6;
+  int32 from_hour = 7;
+  int32 to_hour = 8;
+  int32 sell_until_hour = 9;
+  bool top_up = 10;
 }
 
 message OpengatesAccount {
@@ -112,6 +131,21 @@ message OpengatesSparksWallet {
   int64 purchased_held_nusd = 7;
   string period = 8;
   string reset_at = 9;
+  // Bundles bought on their own, each with its own expiry; spent before the monthly Sparks.
+  repeated OpengatesSparksBundle bundles = 10;
+}
+
+message OpengatesSparksBundle {
+  string id = 1;
+  string product = 2;
+  int64 granted_nusd = 3;
+  int64 used_nusd = 4;
+  int64 held_nusd = 5;
+  string starts_at = 6;
+  string expires_at = 7;
+  bool windowed = 8;
+  int32 from_hour = 9;
+  int32 to_hour = 10;
 }
 
 message OpengatesSparksCall {

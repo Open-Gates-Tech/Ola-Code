@@ -3,7 +3,9 @@ import {
 	OpengatesAccount,
 	OpengatesAgentBudgetBalance,
 	OpengatesAgentBudgetTask,
+	OpengatesBundleOffer,
 	OpengatesProduct,
+	OpengatesSparksBundle,
 	OpengatesSparksCall,
 	OpengatesSparksWallet,
 } from "@/shared/proto/cline/account"
@@ -13,6 +15,21 @@ import { createOpengatesFetch, OPENGATES_API_BASE_URL } from "./opengates-provid
 import { getOpengatesAgentTask } from "./opengates-task-budget"
 
 const exactAmount = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+const hour = z.number().int().min(0).max(23)
+const bundleSchema = z
+	.object({
+		id: z.string().min(1),
+		product: z.string(),
+		granted_nusd: exactAmount,
+		used_nusd: exactAmount,
+		held_nusd: exactAmount,
+		starts_at: z.string().datetime({ offset: true }),
+		expires_at: z.string().datetime({ offset: true }),
+		windowed: z.boolean().optional(),
+		from_hour: hour.optional(),
+		to_hour: hour.optional(),
+	})
+	.refine((b) => b.used_nusd + b.held_nusd <= b.granted_nusd, "Invalid Sparks bundle balance")
 const sparksSchema = z
 	.object({
 		version: z.literal("sparks-v1"),
@@ -24,6 +41,7 @@ const sparksSchema = z
 		purchased_held_nusd: exactAmount,
 		period: z.string().min(1),
 		reset_at: z.string().datetime({ offset: true }),
+		bundles: z.array(bundleSchema).max(24).optional(),
 	})
 	.refine(
 		(w) =>
@@ -66,8 +84,59 @@ const productSchema = z.object({
 	tier: z.string().optional(),
 	days: z.number().optional(),
 	billing_version: z.string().optional(),
+	bundle: z
+		.object({
+			name: z.string().min(1).max(40),
+			label: z.string().max(60),
+			sparks: z.number().int().positive(),
+			hours: z.number().int().nonnegative().optional(),
+			until_midnight: z.boolean().optional(),
+			windowed: z.boolean().optional(),
+			from_hour: hour.optional(),
+			to_hour: hour.optional(),
+			sell_until_hour: hour.optional(),
+			top_up: z.boolean().optional(),
+		})
+		.optional(),
 })
-const catalogSchema = z.object({ data: z.array(productSchema), billing_enabled: z.boolean().optional() })
+const catalogSchema = z.object({
+	data: z.array(productSchema),
+	billing_enabled: z.boolean().optional(),
+	not_on_sale: z.array(z.string()).optional(),
+})
+type CatalogProduct = z.infer<typeof productSchema>
+
+/** A Sparks plan (USD, with a tier) or a Sparks bundle or top-up (KES, with an offer). */
+function sparksProduct(p: CatalogProduct): boolean {
+	if (p.billing_version !== "sparks-v1") return false
+	return p.bundle ? p.currency === "KES" && !p.tier : p.currency === "USD"
+}
+
+function toProduct(p: CatalogProduct, closed: string[]): OpengatesProduct {
+	const b = p.bundle
+	return OpengatesProduct.create({
+		id: p.id,
+		currency: p.currency,
+		amount: p.amount,
+		tier: p.tier,
+		billingVersion: p.billing_version,
+		onSale: !closed.includes(p.id),
+		bundle: b
+			? OpengatesBundleOffer.create({
+					name: b.name,
+					label: b.label,
+					sparks: b.sparks,
+					hours: b.hours ?? 0,
+					untilMidnight: b.until_midnight ?? false,
+					windowed: b.windowed ?? false,
+					fromHour: b.from_hour ?? 0,
+					toHour: b.to_hour ?? 0,
+					sellUntilHour: b.sell_until_hour ?? 0,
+					topUp: b.top_up ?? false,
+				})
+			: undefined,
+	})
+}
 const checkoutSchema = z.object({ checkout_url: z.string().url() })
 
 // Go serializes unset time.Time as year 0001.
@@ -105,17 +174,7 @@ export async function fetchOpengatesAccount(
 		try {
 			const catalog = await getJson(fetcher, "/billing/products", catalogSchema)
 			billingEnabled = catalog.billing_enabled === true
-			products = catalog.data
-				.filter((p) => p.billing_version === "sparks-v1" && p.currency === "USD")
-				.map((p) =>
-					OpengatesProduct.create({
-						id: p.id,
-						currency: p.currency,
-						amount: p.amount,
-						tier: p.tier,
-						billingVersion: p.billing_version,
-					}),
-				)
+			products = catalog.data.filter(sparksProduct).map((p) => toProduct(p, catalog.not_on_sale ?? []))
 		} catch (error) {
 			Logger.warn("Could not load Sparks plan catalog; checkout is unavailable.", error)
 		}
@@ -145,6 +204,20 @@ export async function fetchOpengatesAccount(
 					purchasedHeldNusd: account.sparks.purchased_held_nusd,
 					period: account.sparks.period,
 					resetAt: account.sparks.reset_at,
+					bundles: (account.sparks.bundles ?? []).map((b) =>
+						OpengatesSparksBundle.create({
+							id: b.id,
+							product: b.product,
+							grantedNusd: b.granted_nusd,
+							usedNusd: b.used_nusd,
+							heldNusd: b.held_nusd,
+							startsAt: b.starts_at,
+							expiresAt: b.expires_at,
+							windowed: b.windowed ?? false,
+							fromHour: b.from_hour ?? 0,
+							toHour: b.to_hour ?? 0,
+						}),
+					),
 				})
 			: undefined,
 		sparksCalls:
@@ -235,8 +308,10 @@ export async function createOpengatesPlanCheckout(
 	const email = (await auth.getUser())?.email
 	if (!email) throw new Error("Your Opengates account has no email address for checkout.")
 	const catalog = await getJson(fetcher, "/billing/products", catalogSchema)
-	const product = catalog.data.find((p) => p.id === productId && p.billing_version === "sparks-v1" && p.currency === "USD")
-	if (!catalog.billing_enabled || !product) throw new Error("This Sparks plan is not available for checkout.")
+	const product = catalog.data.find((p) => p.id === productId && sparksProduct(p))
+	if (!catalog.billing_enabled || !product) throw new Error("This Sparks plan or bundle is not available for checkout.")
+	if (catalog.not_on_sale?.includes(product.id))
+		throw new Error(`${product.bundle?.name ?? "This bundle"} is not sold at this hour.`)
 	const checkout = await getJson(fetcher, "/billing/checkout", checkoutSchema, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
