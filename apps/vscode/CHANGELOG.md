@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.5] (Preview)
+
+- Buy Sparks bundles and top-ups in KES from the Sparks view, and see running
+  bundles with the time they have left.
+- See your Mwezi subscription and when it renews, with Cancel or Renew; Mwezi
+  bundles can renew every month on a card. Pro, Ultra and Ultra Plus subscribers see
+  when their plan becomes Mwezi, Mwezi Plus or Mwezi Max. The USD plans are gone.
+- Free accounts get Bure: free Sparks every day, refilled at midnight East Africa
+  Time, for Quick and Balanced.
+- Clear messages when Sparks run out: Bure's daily limit, Deep's 150,000-Spark
+  minimum, an empty balance, and an organisation's monthly limit or empty team
+  Sparks, instead of a generic error or a long "try again in" countdown.
+
 ## [0.1.4] (Preview)
 
 - Use Ola blue (#1976d2) for buttons, the Plan/Agent switch, the chat input box and

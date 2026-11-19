@@ -54,4 +54,23 @@ describe("Ola failure propagation", () => {
 		expect(failure.retry_after_seconds).toBeGreaterThanOrEqual(59)
 		expect(failure.request_id).toBeUndefined()
 	})
+
+	it.each([
+		["bure_daily_cap", "Bure refills at midnight"],
+		["allowance_exhausted", "Get a bundle or top-up"],
+		["sparks_too_low_for_mode", "Deep needs at least 150,000 Sparks"],
+		["biashara_limit", "Ask your organisation for more"],
+		["biashara_pool", "Your organisation is out of Sparks"],
+	] as const)("explains %s without telling people to wait seconds", async (code, text) => {
+		const response = await sanitizeOpengatesFailure(
+			new Response(JSON.stringify({ error: { code, message: "upstream" } }), {
+				status: 429,
+				headers: { "retry-after": "950000" },
+			}),
+		)
+		const failure = JSON.parse((await response.json()).error.message)
+		expect(failure.message).toContain(text)
+		expect(failure.message).not.toContain("Try again in")
+		expect(failure.retry_after_seconds).toBe(950000)
+	})
 })

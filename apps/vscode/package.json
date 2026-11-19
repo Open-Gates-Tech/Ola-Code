@@ -2,7 +2,7 @@
 	"name": "ola-code",
 	"displayName": "Ola Code",
 	"description": "Autonomous AI coding agent and multi-agent developer workspace powered by Opengates.",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"preview": true,
 	"icon": "assets/icons/icon.png",
 	"engines": {

@@ -9,7 +9,30 @@ const ERROR_MESSAGES: Record<string, string> = {
 	provider_risk_limit_exceeded: "Ola is temporarily paused. Please try again later. This pause is not a Sparks balance error.",
 	sparks_risk_limit_exceeded: "Ola is temporarily paused. Please try again later. This pause is not a Sparks balance error.",
 	insufficient_sparks: "There aren't enough Sparks for this request. Check your Sparks balance before trying again.",
+	allowance_exhausted:
+		"You've used all your Sparks for now. Get a bundle or top-up under Sparks in your Ola account to keep going.",
+	bure_daily_cap:
+		"Today's free Sparks have all been used. Bure refills at midnight, East Africa Time; a bundle or top-up works right away.",
+	sparks_too_low_for_mode:
+		"Deep needs at least 150,000 Sparks to start. Switch to Quick or Balanced, or get a bundle or top-up under Sparks.",
+	request_exceeds_allowance:
+		"This request needs more Sparks than you have left. Try Quick, or get a bundle or top-up under Sparks.",
+	biashara_limit:
+		"You've used this month's Sparks from your organisation. Ask your organisation for more in Ola, under Sparks, or choose to use your own Sparks there.",
+	biashara_pool:
+		"Your organisation is out of Sparks for the team. Ask your organisation to add more, or choose to use your own Sparks in Ola, under Sparks.",
 }
+
+// Running out of Sparks is not fixed by waiting a few seconds: these messages say when Sparks come back
+// instead, so no "Try again in N seconds" is added (the wait can run to the end of the month).
+const SPARKS_CODES = new Set([
+	"allowance_exhausted",
+	"bure_daily_cap",
+	"sparks_too_low_for_mode",
+	"request_exceeds_allowance",
+	"biashara_limit",
+	"biashara_pool",
+])
 
 export interface OpengatesFailure {
 	source: "ola"
@@ -86,7 +109,7 @@ export async function sanitizeOpengatesFailure(response: Response): Promise<Resp
 		...(id ? { request_id: id } : {}),
 		...(wait !== undefined ? { retry_after_seconds: wait } : {}),
 	}
-	if (wait !== undefined) failure.message += ` Try again in ${wait} seconds.`
+	if (wait !== undefined && !SPARKS_CODES.has(code)) failure.message += ` Try again in ${wait} seconds.`
 	// Keep the envelope in the message: the SDK forwards error.message through
 	// persisted events, whereas arbitrary response fields would be flattened away.
 	return new Response(JSON.stringify({ error: { code, message: JSON.stringify(failure) } }), {
