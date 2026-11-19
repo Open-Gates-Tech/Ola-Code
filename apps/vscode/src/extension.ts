@@ -56,7 +56,11 @@ import { VscodeWebviewProvider } from "./hosts/vscode/VscodeWebviewProvider"
 import { exportVSCodeStorageToSharedFiles } from "./hosts/vscode/vscode-to-file-migration"
 import { ExtensionRegistryInfo } from "./registry"
 import { AuthService, LogoutReason } from "./sdk/auth-service"
+import { OlaSkillSync } from "./sdk/ola-skill-sync"
+import { OlaWorkspaceChoice } from "./sdk/ola-workspace"
+import { chooseOlaWorkspace } from "./sdk/ola-workspace-picker"
 import { OPENGATES_CALLBACK_PATH, OPENGATES_SESSION_KEY, OpengatesAuthService } from "./sdk/opengates-auth-service"
+import { createOpengatesFetch } from "./sdk/opengates-provider"
 import { telemetryService } from "./services/telemetry"
 import type { RolloutBundleActivation } from "./services/telemetry/rollout-metadata"
 import { LG_TASK_URI_PATH, SharedUriHandler, TASK_URI_PATH } from "./services/uri/SharedUriHandler"
@@ -192,6 +196,32 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand(commands.HistoryButton, () => sendHistoryButtonClickedEvent()))
 	context.subscriptions.push(vscode.commands.registerCommand(commands.AccountButton, () => sendAccountButtonClickedEvent()))
 	context.subscriptions.push(vscode.commands.registerCommand(commands.WorktreesButton, () => sendWorktreesButtonClickedEvent()))
+
+	// The workspace Ola Code works in (personal, or an organisation's), and Ola's skill library for it,
+	// mirrored into Ola Code's skills folder for the signed-in Opengates user.
+	const olaWorkspace = OlaWorkspaceChoice.initialize(context.globalState)
+	const olaSkills = new OlaSkillSync(opengatesAuth, olaWorkspace)
+	context.subscriptions.push(olaSkills)
+	void olaSkills.start().catch((error) => Logger.warn("[OlaSkills] Could not start skill sync.", error))
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.ChooseWorkspace, () =>
+			chooseOlaWorkspace(opengatesAuth, olaWorkspace, createOpengatesFetch(opengatesAuth)),
+		),
+	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.SyncSkills, async () => {
+			try {
+				const result = await olaSkills.sync()
+				void vscode.window.showInformationMessage(
+					result
+						? `Ola's skills are up to date (${result.installed.length} from ${olaSkills.workspaceName()}).`
+						: "Sign in to Ola Code with Opengates to use Ola's skills.",
+				)
+			} catch {
+				void vscode.window.showErrorMessage("Ola's skills couldn't be updated. Ola Code keeps the last copy and retries.")
+			}
+		}),
+	)
 
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(DIFF_VIEW_URI_SCHEME, diffContentProvider))
 

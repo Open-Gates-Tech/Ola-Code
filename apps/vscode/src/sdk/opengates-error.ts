@@ -14,11 +14,14 @@ const ERROR_MESSAGES: Record<string, string> = {
 	bure_daily_cap:
 		"Today's free Sparks have all been used. Bure refills at midnight, East Africa Time; a bundle or top-up works right away.",
 	sparks_too_low_for_mode:
-		"Pro needs at least 150,000 Sparks to start. Switch to Fast or Thinking, or get a bundle or top-up under Sparks.",
+		"Deep needs at least 150,000 Sparks to start. Switch to Quick or Balanced, or get a bundle or top-up under Sparks.",
 	request_exceeds_allowance:
-		"This request needs more Sparks than you have left. Try Fast, or get a bundle or top-up under Sparks.",
+		"This request needs more Sparks than you have left. Try Quick, or get a bundle or top-up under Sparks.",
 	biashara_limit:
 		"You've used this month's Sparks from your organisation. Ask your organisation for more in Ola, under Sparks, or choose to use your own Sparks there.",
+	workspace_forbidden:
+		"You're no longer a member of that organisation, so Ola Code switched to your personal workspace. Send your message again.",
+	workspace_check_unavailable: "Ola couldn't check your organisation membership just now. Please try again shortly.",
 	biashara_pool:
 		"Your organisation is out of Sparks for the team. Ask your organisation to add more, or choose to use your own Sparks in Ola, under Sparks.",
 }

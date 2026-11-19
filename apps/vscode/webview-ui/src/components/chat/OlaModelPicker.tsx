@@ -7,8 +7,8 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 
 const MODEL_DESCRIPTIONS: Record<string, string> = {
 	"ola-code-fast": "Quick answers and everyday edits",
-	"ola-code-reason": "Deeper reasoning for complex tasks",
-	"ola-code-pro": "Most capable model for demanding work",
+	"ola-code-reason": "Reasoning for most coding work",
+	"ola-code-pro": "Most capable models for the hardest problems",
 }
 
 const MENU_ITEMS = OPENGATES_MODELS.map(({ id, label }) => ({ id, label, description: MODEL_DESCRIPTIONS[id] }))

@@ -1,7 +1,7 @@
 import type { ApiConfiguration } from "./api"
 import type { Mode } from "./storage/types"
 
-// All aliases must fit the smallest eligible context, including Pro's 200k
+// All aliases must fit the smallest eligible context, including Deep's 200k
 // routes. Reserve output and server-injected guidance before SDK compaction.
 export const OPENGATES_CONTEXT_WINDOW = 200_000
 export const OPENGATES_MAX_OUTPUT_TOKENS = 8_192
@@ -21,9 +21,9 @@ export function getOpengatesModelInfo(modelId: string): ModelInfo {
 }
 
 export const OPENGATES_MODELS = [
-	{ id: "ola-code-fast", label: "Fast" },
-	{ id: "ola-code-reason", label: "Thinking" },
-	{ id: "ola-code-pro", label: "Pro" },
+	{ id: "ola-code-fast", label: "Quick" },
+	{ id: "ola-code-reason", label: "Balanced" },
+	{ id: "ola-code-pro", label: "Deep" },
 ] as const
 
 export function resolveOpengatesModel(config: ApiConfiguration | undefined, mode: Mode): string {

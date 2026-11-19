@@ -53,11 +53,11 @@ Switch modes dynamically in the chat input bar to match the complexity of your t
 | **Plan** | Multi-file refactors, system architecture, complex migrations | Investigates your workspace and drafts a step-by-step technical spec before touching any code. |
 | **Interactive** | Pair programming, unfamiliar codebases, guided debugging | Asks clarifying questions first, aligns on the approach, and waits for confirmation at each step. |
 
-### Three Models: Fast, Thinking and Pro
+### Three Models: Quick, Balanced and Deep
 Pick a model from the model picker (your selection persists per workspace):
-* **Fast (`ola-code-fast`):** Low latency for inline edits, boilerplate, syntax fixes and quick questions.
-* **Thinking (`ola-code-reason`):** Reasoning models for architecture, tricky bugs and multi-file refactoring.
-* **Pro (`ola-code-pro`):** The most capable models for the hardest tasks. A Pro task needs at least 150,000 Sparks to start, so it is unlikely to run short part-way.
+* **Quick:** Low latency for inline edits, boilerplate, syntax fixes and quick questions.
+* **Balanced:** Reasoning models for most coding: architecture, tricky bugs and multi-file refactoring.
+* **Deep:** The most capable models for the hardest tasks. A Deep task needs at least 150,000 Sparks to start, so it is unlikely to run short part-way.
 
 ---
 
@@ -86,7 +86,7 @@ Pick a model from the model picker (your selection persists per workspace):
 
 Every model call and web search uses Sparks, from one wallet shared with Ola on the web. 1,000,000 Sparks is USD 1 of model cost, charged at each model's published rates for input, cached input and output; web searches are charged at cost. Holds are temporary reservations, not charges.
 
-* **Bure (free):** Free accounts get 20,000 Sparks every day for Fast and Thinking, refilled at midnight East Africa Time. Unused Bure does not carry over, and on a very busy day free Sparks can pause until midnight.
+* **Bure (free):** Free accounts get 20,000 Sparks every day for Quick and Balanced, refilled at midnight East Africa Time. Unused Bure does not carry over, and on a very busy day free Sparks can pause until midnight.
 * **Bundles:** Buy more in KES from the Sparks view in Ola Code, paid through Paystack. Whatever ends soonest is spent first, so Bure and bundles are not wasted.
 * **Top-ups:** Sparks that never expire, spent last.
 

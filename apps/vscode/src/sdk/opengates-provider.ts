@@ -3,6 +3,7 @@ import type { ApiConfiguration } from "@/shared/api"
 import { fetch } from "@/shared/net"
 import { getOpengatesModelInfo, OPENGATES_MAX_OUTPUT_TOKENS, resolveOpengatesModel } from "@/shared/opengates-models"
 import type { Mode } from "@/shared/storage/types"
+import { OLA_WORKSPACE_HEADER, OlaWorkspaceChoice } from "./ola-workspace"
 import { OpengatesAuthService } from "./opengates-auth-service"
 import { sanitizeOpengatesFailure } from "./opengates-error"
 import type { OpengatesTaskCorrelation } from "./opengates-task-budget"
@@ -41,6 +42,12 @@ export function createOpengatesFetch(
 		if (url.origin !== new URL(OPENGATES_API_BASE_URL).origin || !url.pathname.startsWith("/v1/")) {
 			throw new Error("Refusing to send Opengates credentials outside the Opengates gateway.")
 		}
+		// Chats run in the workspace Ola Code works in; everything else (account, checkout) stays personal.
+		const workspace =
+			url.pathname === "/v1/chat/completions" && !request.headers.has(OLA_WORKSPACE_HEADER)
+				? OlaWorkspaceChoice.get()?.current()
+				: undefined
+		if (workspace) request.headers.set(OLA_WORKSPACE_HEADER, workspace.id)
 		const send = async (token: string) => {
 			const headers = new Headers(request.headers)
 			headers.set("Authorization", `Bearer ${token}`)
@@ -73,7 +80,20 @@ export function createOpengatesFetch(
 			response = await send(refreshed)
 			if (response.status === 401) await auth.logout()
 		}
-		return response.ok ? response : sanitizeOpengatesFailure(response)
+		if (response.ok) return response
+		const failure = await sanitizeOpengatesFailure(response)
+		if (workspace && failure.status === 403) {
+			const code = await failure
+				.clone()
+				.json()
+				.then((body: { error?: { code?: unknown } }) => body.error?.code)
+				.catch(() => undefined)
+			// No longer a member: later messages go to the personal workspace; this one says what happened.
+			if (code === "workspace_forbidden" && OlaWorkspaceChoice.get()?.current()?.id === workspace.id) {
+				await OlaWorkspaceChoice.get()?.set(undefined)
+			}
+		}
+		return failure
 	}
 	const baseFetchWithPreconnect = baseFetch as FetchWithOptionalPreconnect
 	return Object.assign(authenticatedFetch, {

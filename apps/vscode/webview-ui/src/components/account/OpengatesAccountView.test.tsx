@@ -35,12 +35,12 @@ describe("OpengatesAccountView", () => {
 		expect(screen.getByText("ramazani@opengates.app")).toBeInTheDocument()
 		expect(screen.getByText("RM")).toBeInTheDocument()
 
-		expect(await screen.findByRole("progressbar", { name: "Fast allowance remaining" })).toHaveAttribute(
+		expect(await screen.findByRole("progressbar", { name: "Quick allowance remaining" })).toHaveAttribute(
 			"aria-valuenow",
 			"50",
 		)
 		expect(screen.getByText("Not included")).toBeInTheDocument()
-		expect(screen.getByText("Thinking & Pro")).toBeInTheDocument()
+		expect(screen.getByText("Balanced & Deep")).toBeInTheDocument()
 		expect(screen.getByText("Ola Free")).toBeInTheDocument()
 		expect(screen.getByText("1,200")).toBeInTheDocument()
 		expect(screen.getByTestId("opengates-upgrade")).toBeInTheDocument()
@@ -129,7 +129,7 @@ describe("OpengatesAccountView", () => {
 	it("handles independently absent limits without treating an unknown negative balance as unlimited", async () => {
 		mocks.getOpengatesAccount.mockResolvedValue({ ...freeAccount, reasonLimit: undefined, reasonRemaining: -1 })
 		render(<OpengatesAccountView user={user} />)
-		expect(await screen.findByRole("progressbar", { name: "Fast allowance remaining" })).toBeInTheDocument()
+		expect(await screen.findByRole("progressbar", { name: "Quick allowance remaining" })).toBeInTheDocument()
 		expect(screen.getByText("Remaining unavailable")).toBeInTheDocument()
 		expect(screen.queryByText("Unlimited")).not.toBeInTheDocument()
 	})
@@ -138,7 +138,7 @@ describe("OpengatesAccountView", () => {
 		mocks.getOpengatesAccount.mockResolvedValue({ ...freeAccount, fastLimit: 100_000 })
 		render(<OpengatesAccountView user={user} />)
 		expect(await screen.findByText("250K of 100K tokens remaining")).toBeInTheDocument()
-		expect(screen.getByRole("progressbar", { name: "Fast allowance remaining" })).toHaveAttribute("aria-valuenow", "100")
+		expect(screen.getByRole("progressbar", { name: "Quick allowance remaining" })).toHaveAttribute("aria-valuenow", "100")
 	})
 
 	it("keeps sign out available when usage fails to load", async () => {

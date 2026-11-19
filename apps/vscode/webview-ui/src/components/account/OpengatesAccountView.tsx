@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { ClineUser } from "@/context/ClineAuthContext"
 import { AccountServiceClient } from "@/services/grpc-client"
 import { formatSparks, SparksUsage } from "./SparksUsage"
+import { WorkspaceCard } from "./WorkspaceCard"
 import { ZawadiCard } from "./ZawadiCard"
 
 const TIER_LABELS: Record<string, string> = {
@@ -192,6 +193,8 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 				</div>
 			</section>
 
+			{account && <WorkspaceCard onChanged={() => void load()} workspace={account.workspace} />}
+
 			<section aria-busy={loading} className="ola-account-card flex flex-col gap-3">
 				<div className="flex items-center justify-between">
 					<h3 className="ola-account-heading">Usage</h3>
@@ -224,8 +227,8 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 					</>
 				) : account ? (
 					<>
-						<UsageMeter allowance={account.fastLimit} label="Fast" remaining={account.fastRemaining} />
-						<UsageMeter allowance={account.reasonLimit} label="Thinking & Pro" remaining={account.reasonRemaining} />
+						<UsageMeter allowance={account.fastLimit} label="Quick" remaining={account.fastRemaining} />
+						<UsageMeter allowance={account.reasonLimit} label="Balanced & Deep" remaining={account.reasonRemaining} />
 						<p className="m-0 text-[11px] text-description">
 							Server-reported raw-token balances, not Standard/Premium budgets.
 						</p>
@@ -338,9 +341,7 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 						<SparklesIcon aria-hidden="true" size={14} />
 						<h3 className="m-0 text-sm font-semibold">Upgrade to Ola Pro</h3>
 					</div>
-					<p className="m-0 text-xs text-description">
-						Unlock Thinking and Pro models with a much larger monthly allowance.
-					</p>
+					<p className="m-0 text-xs text-description">Unlock Balanced and Deep with a much larger monthly allowance.</p>
 					<button
 						className="ola-pill-button self-start"
 						data-variant="primary"

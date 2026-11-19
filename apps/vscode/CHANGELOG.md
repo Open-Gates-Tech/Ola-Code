@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.7] (Preview)
+
+- Work in your organisation's workspace. Choose it with **Ola Code: Choose
+  Workspace** or the Change button on the account screen. Messages there use the
+  organisation's skills, memory and connected apps, and with Biashara the
+  organisation pays for your Sparks within your monthly limit. The account screen
+  shows what it gives you this month, with a link to ask for more. Billing, checkout
+  and your own Sparks stay personal.
+- Ola's skills: Ola Code keeps the workspace's approved code skills in its skills
+  folder, updated every 15 minutes and on **Ola Code: Update Ola's Skills**. Skills
+  you added yourself are never changed.
+- If you leave an organisation, Ola Code returns to your personal workspace and
+  tells you.
+- The models are now called Quick, Balanced and Deep, as on Ola on the web.
+
 ## [0.1.6] (Preview)
 
 - Zawadi in the Sparks view: your invite link with a copy button, WhatsApp

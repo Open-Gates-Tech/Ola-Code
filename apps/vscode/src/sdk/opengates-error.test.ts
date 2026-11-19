@@ -58,7 +58,7 @@ describe("Ola failure propagation", () => {
 	it.each([
 		["bure_daily_cap", "Bure refills at midnight"],
 		["allowance_exhausted", "Get a bundle or top-up"],
-		["sparks_too_low_for_mode", "Pro needs at least 150,000 Sparks"],
+		["sparks_too_low_for_mode", "Deep needs at least 150,000 Sparks"],
 		["biashara_limit", "Ask your organisation for more"],
 		["biashara_pool", "Your organisation is out of Sparks"],
 	] as const)("explains %s without telling people to wait seconds", async (code, text) => {

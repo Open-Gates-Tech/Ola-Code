@@ -23,24 +23,24 @@ function openPicker() {
 }
 
 describe("Ola model picker", () => {
-	it("offers Fast, Thinking, and Pro", () => {
+	it("offers Quick, Balanced, and Deep", () => {
 		render(<OlaModelPicker />)
 		const trigger = screen.getByRole("button", { name: "Model" })
-		expect(trigger).toHaveTextContent("Fast")
+		expect(trigger).toHaveTextContent("Quick")
 		expect(trigger).toHaveAttribute("aria-expanded", "false")
 
 		openPicker()
 		expect(trigger).toHaveAttribute("aria-expanded", "true")
-		expect(screen.getByRole("option", { name: /Fast/ })).toHaveAttribute("aria-selected", "true")
-		expect(screen.getByRole("option", { name: /Thinking/ })).toBeEnabled()
-		expect(screen.getByRole("option", { name: /Pro/ })).toBeEnabled()
+		expect(screen.getByRole("option", { name: /Quick/ })).toHaveAttribute("aria-selected", "true")
+		expect(screen.getByRole("option", { name: /Balanced/ })).toBeEnabled()
+		expect(screen.getByRole("option", { name: /Deep/ })).toBeEnabled()
 	})
 
-	it("persists Pro for both modes", async () => {
+	it("persists Deep for both modes", async () => {
 		mocks.update.mockResolvedValue(undefined)
 		render(<OlaModelPicker />)
 		openPicker()
-		fireEvent.click(screen.getByRole("option", { name: /Pro/ }))
+		fireEvent.click(screen.getByRole("option", { name: /Deep/ }))
 		await waitFor(() =>
 			expect(mocks.update).toHaveBeenCalledWith({
 				planModeApiProvider: "openai",
@@ -55,7 +55,7 @@ describe("Ola model picker", () => {
 		mocks.update.mockResolvedValue(undefined)
 		render(<OlaModelPicker />)
 		openPicker()
-		fireEvent.click(screen.getByRole("option", { name: /Thinking/ }))
+		fireEvent.click(screen.getByRole("option", { name: /Balanced/ }))
 		await waitFor(() =>
 			expect(mocks.update).toHaveBeenCalledWith({
 				planModeApiProvider: "openai",
@@ -86,8 +86,8 @@ describe("Ola model picker", () => {
 		mocks.update.mockRejectedValue(new Error("Offline"))
 		render(<OlaModelPicker />)
 		openPicker()
-		fireEvent.click(screen.getByRole("option", { name: /Thinking/ }))
+		fireEvent.click(screen.getByRole("option", { name: /Balanced/ }))
 		expect(await screen.findByRole("alert")).toHaveTextContent("Could not change model")
-		expect(screen.getByRole("button", { name: "Model" })).toHaveTextContent("Fast")
+		expect(screen.getByRole("button", { name: "Model" })).toHaveTextContent("Quick")
 	})
 })

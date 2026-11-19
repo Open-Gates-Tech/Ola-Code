@@ -77,7 +77,7 @@ export function SparksUsage({ account, now = new Date(), onChanged }: Props) {
 					{formatSparks(includedAvailable + purchasedAvailable + bundleAvailable)} Sparks
 				</output>
 				<p className="m-0 mt-1 text-xs text-description">
-					Available across Fast, Thinking and Pro. Models consume Sparks at their published rates.
+					Available across Quick, Balanced and Deep. Models consume Sparks at their published rates.
 				</p>
 			</div>
 			<div className="ola-usage-meter">
@@ -122,7 +122,7 @@ export function SparksUsage({ account, now = new Date(), onChanged }: Props) {
 			</dl>
 			<p className="m-0 text-[11px] text-description">
 				{wallet.daily
-					? "Bure pays for Fast and Thinking, refills every midnight, and does not carry over."
+					? "Bure pays for Quick and Balanced, refills every midnight, and does not carry over."
 					: "Monthly included Sparks expire at reset."}{" "}
 				Bundles last as long as their name says; top-ups never expire. Holds are not charges. Measured usage is charged
 				even if a call is interrupted; unknown usage is not charged. Web searches use Sparks too. Sparks represent usage

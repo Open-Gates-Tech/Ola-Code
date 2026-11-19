@@ -50,7 +50,7 @@ describe("Sparks wallet UI", () => {
 		render(<OpengatesAccountView user={user} />)
 		expect(await screen.findByLabelText("Available Sparks")).toHaveTextContent("5,000,000 Sparks")
 		expect(screen.getByText("0.001 Sparks")).toBeInTheDocument()
-		expect(screen.queryByText("Thinking & Pro")).not.toBeInTheDocument()
+		expect(screen.queryByText("Balanced & Deep")).not.toBeInTheDocument()
 		expect(screen.queryByText(/USD/)).not.toBeInTheDocument()
 		expect(screen.queryByText("Recent model calls and token diagnostics")).not.toBeInTheDocument()
 		expect(screen.queryByText("Input tokens")).not.toBeInTheDocument()

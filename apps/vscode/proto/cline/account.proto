@@ -71,6 +71,9 @@ service AccountService {
 
   // Cancels (false) or restarts (true) automatic renewal of the subscription.
   rpc setOpengatesAutoRenew(BooleanRequest) returns (Empty);
+
+  // Lets the person choose where Ola Code works: their own workspace or one of their organisations'.
+  rpc chooseOlaWorkspace(EmptyRequest) returns (Empty);
 }
 
 message OpengatesProduct {
@@ -141,6 +144,38 @@ message OpengatesAccount {
   optional OpengatesSubscriptionStatus subscription = 19;
   // Zawadi invites; absent when Zawadi is off or could not be read.
   optional OpengatesZawadi zawadi = 20;
+  // The organisation workspace Ola Code works in; absent in the personal workspace.
+  optional OpengatesWorkspace workspace = 21;
+}
+
+// An organisation workspace Ola Code works in.
+message OpengatesWorkspace {
+  string id = 1;
+  string name = 2;
+  // "owner" for the organisation account itself, otherwise "member".
+  string role = 3;
+  // The organisation's Sparks page on the web, where members ask for more and owners manage the team.
+  string sparks_url = 4;
+  // What the organisation gives this member (Biashara); absent for the owner or when it can't be read.
+  optional OpengatesTeamSparks team = 5;
+}
+
+// A member's Sparks from their organisation this month, in Sparks.
+message OpengatesTeamSparks {
+  // The organisation pays for members in its workspace.
+  bool enabled = 1;
+  // False when the member has no monthly limit.
+  bool limited = 2;
+  int64 limit = 3;
+  int64 extra = 4;
+  int64 used = 5;
+  int64 remaining = 6;
+  // The member pays from their own Sparks once the organisation's run out.
+  bool own_sparks = 7;
+  bool pool_empty = 8;
+  // Sparks asked for and not yet answered.
+  int64 pending = 9;
+  string month_ends = 10;
 }
 
 // Zawadi: invite a friend; when they join and send a few messages, both get a Zawadi bundle.

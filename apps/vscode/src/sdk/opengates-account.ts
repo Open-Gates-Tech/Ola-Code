@@ -12,10 +12,12 @@ import {
 	OpengatesZawadi,
 } from "@/shared/proto/cline/account"
 import { Logger } from "@/shared/services/Logger"
+import { OlaWorkspaceChoice } from "./ola-workspace"
 import type { OpengatesAuthService } from "./opengates-auth-service"
 import { createOpengatesFetch, OPENGATES_API_BASE_URL } from "./opengates-provider"
 import { subscriptionSchema, subscriptionStatus } from "./opengates-subscription"
 import { getOpengatesAgentTask } from "./opengates-task-budget"
+import { fetchWorkspace } from "./opengates-team"
 import { toZawadi, zawadiSchema } from "./opengates-zawadi"
 
 const exactAmount = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
@@ -196,6 +198,8 @@ export async function fetchOpengatesAccount(
 			Logger.warn("Could not load the Sparks subscription.", error)
 		}
 	}
+	const chosen = OlaWorkspaceChoice.get()?.current()
+	const workspace = chosen ? await fetchWorkspace(fetcher, OPENGATES_API_BASE_URL, chosen) : undefined
 	let zawadi: OpengatesZawadi | undefined
 	if (account.sparks) {
 		try {
@@ -269,6 +273,7 @@ export async function fetchOpengatesAccount(
 		billingEnabled,
 		subscription,
 		zawadi,
+		workspace,
 		tier: account.tier,
 		status: account.status,
 		creditsRemaining: account.credits_remaining,

@@ -2,7 +2,7 @@
 	"name": "ola-code",
 	"displayName": "Ola Code",
 	"description": "Autonomous AI coding agent and multi-agent developer workspace powered by Opengates.",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"preview": true,
 	"icon": "assets/icons/icon.png",
 	"engines": {
@@ -72,8 +72,8 @@
 					},
 					{
 						"id": "advanced-features",
-						"title": "Choose Fast or Thinking",
-						"description": "Ola runs on Opengates models. Pick Fast for quick edits or Thinking for harder problems, no API keys needed.",
+						"title": "Choose Quick, Balanced or Deep",
+						"description": "Ola runs on Opengates models. Pick Quick for small edits, Balanced for most coding, or Deep for the hardest problems, no API keys needed.",
 						"media": {
 							"markdown": "walkthrough/step3.md"
 						}
@@ -144,6 +144,16 @@
 				"command": "ola-code.accountButtonClicked",
 				"title": "Account",
 				"icon": "$(account)"
+			},
+			{
+				"command": "ola-code.chooseWorkspace",
+				"title": "Choose Workspace",
+				"category": "Ola Code"
+			},
+			{
+				"command": "ola-code.syncSkills",
+				"title": "Update Ola's Skills",
+				"category": "Ola Code"
 			},
 			{
 				"command": "ola-code.dev.createTestTasks",

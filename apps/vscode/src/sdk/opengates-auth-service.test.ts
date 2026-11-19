@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { resolveOpengatesModel } from "@/shared/opengates-models"
+import { OlaWorkspaceChoice } from "./ola-workspace"
 import { OPENGATES_SESSION_KEY, OpengatesAuthService } from "./opengates-auth-service"
 import { createOpengatesFetch, getOpengatesProviderConfig, OPENGATES_API_BASE_URL } from "./opengates-provider"
 import { createOpengatesTaskCorrelation } from "./opengates-task-budget"
@@ -287,6 +288,28 @@ describe("Opengates gateway requests", () => {
 		expect(request.headers.get("content-type")).toBe("application/json")
 		expect(request.redirect).toBe("error")
 		expect(await request.json()).toEqual({ model: "ola-code-fast", messages: [] })
+	})
+
+	it("sends chats in the chosen organisation's workspace, and nothing else", async () => {
+		const { auth } = await signedIn()
+		const state = new Map<string, unknown>()
+		const choice = OlaWorkspaceChoice.initialize({ get: (k) => state.get(k), update: async (k, v) => void state.set(k, v) })
+		await choice.set({ id: "0123456789abcdef01234567", name: "Sir Africa", role: "member" })
+		const baseFetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(json({ choices: [] }))
+		const wrappedFetch = createOpengatesFetch(auth, baseFetch)
+		await wrappedFetch(`${OPENGATES_API_BASE_URL}/chat/completions`, { method: "POST" })
+		await wrappedFetch(`${OPENGATES_API_BASE_URL}/account`)
+		expect((baseFetch.mock.calls[0][0] as Request).headers.get("X-Ola-Workspace")).toBe("0123456789abcdef01234567")
+		expect((baseFetch.mock.calls[1][0] as Request).headers.get("X-Ola-Workspace")).toBeNull()
+
+		// Removed from the organisation: Ola refuses, and Ola Code returns to the personal workspace.
+		baseFetch.mockResolvedValueOnce(json({ error: { code: "workspace_forbidden", message: "x" } }, 403))
+		const refused = await wrappedFetch(`${OPENGATES_API_BASE_URL}/chat/completions`, { method: "POST" })
+		expect(refused.status).toBe(403)
+		expect(JSON.parse((await refused.json()).error.message).message).toContain("switched to your personal workspace")
+		expect(choice.current()).toBeUndefined()
+		await wrappedFetch(`${OPENGATES_API_BASE_URL}/chat/completions`, { method: "POST" })
+		expect((baseFetch.mock.calls[3][0] as Request).headers.get("X-Ola-Workspace")).toBeNull()
 	})
 
 	it("correlates only shadow-enabled generation requests to the stable task id", async () => {
