@@ -139,6 +139,28 @@ message OpengatesAccount {
   repeated OpengatesProduct products = 17;
   bool billing_enabled = 18;
   optional OpengatesSubscriptionStatus subscription = 19;
+  // Zawadi invites; absent when Zawadi is off or could not be read.
+  optional OpengatesZawadi zawadi = 20;
+}
+
+// Zawadi: invite a friend; when they join and send a few messages, both get a Zawadi bundle.
+message OpengatesZawadi {
+  string code = 1;
+  // The invite link to share, and a WhatsApp link carrying it.
+  string link = 2;
+  string share_url = 3;
+  // How Zawadi works, on the web.
+  string about_url = 4;
+  int32 invited = 5;
+  int32 rewarded = 6;
+  int32 left_this_month = 7;
+  int64 reward_sparks = 8;
+  int32 reward_days = 9;
+  int32 messages_needed = 10;
+  int32 monthly_limit = 11;
+  // Set when this person joined with a friend's code: "pending" or "rewarded", and their messages so far.
+  string invited_by_state = 12;
+  int32 invited_by_messages = 13;
 }
 
 message OpengatesSparksWallet {

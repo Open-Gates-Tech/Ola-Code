@@ -14,9 +14,9 @@ const ERROR_MESSAGES: Record<string, string> = {
 	bure_daily_cap:
 		"Today's free Sparks have all been used. Bure refills at midnight, East Africa Time; a bundle or top-up works right away.",
 	sparks_too_low_for_mode:
-		"Deep needs at least 150,000 Sparks to start. Switch to Quick or Balanced, or get a bundle or top-up under Sparks.",
+		"Pro needs at least 150,000 Sparks to start. Switch to Fast or Thinking, or get a bundle or top-up under Sparks.",
 	request_exceeds_allowance:
-		"This request needs more Sparks than you have left. Try Quick, or get a bundle or top-up under Sparks.",
+		"This request needs more Sparks than you have left. Try Fast, or get a bundle or top-up under Sparks.",
 	biashara_limit:
 		"You've used this month's Sparks from your organisation. Ask your organisation for more in Ola, under Sparks, or choose to use your own Sparks there.",
 	biashara_pool:

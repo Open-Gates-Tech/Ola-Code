@@ -27,7 +27,7 @@
 
 Zero API keys or complex cloud provider setups required. Sign in with your Opengates account and start shipping immediately.
 
-> **Public Preview:** Welcome to the initial release of Ola Code. Share feedback, report issues, or request features at [support.opengates.app](https://support.opengates.app).
+> **Public Preview:** Ola Code is in public preview. Share feedback, report issues, or request features at [support.opengates.app](https://support.opengates.app).
 
 <!-- Replace with absolute HTTPS URL before running vsce package, e.g., https://raw.githubusercontent.com/Open-Gates-Tech/ola-code/main/assets/demo.gif -->
 <!-- ![Ola Code Workflow Demo](https://raw.githubusercontent.com/Open-Gates-Tech/ola-code/main/assets/demo.gif) -->
@@ -37,7 +37,7 @@ Zero API keys or complex cloud provider setups required. Sign in with your Openg
 ## Quick Start
 
 1. **Install:** Install **Ola Code** from the VS Code Marketplace and click the **Ola** icon in the Activity Bar.
-2. **Authenticate:** Click **Sign In with Opengates** to complete OAuth sign-in in your browser. *(New to Opengates? [Create a free account](https://www.opengates.app/signup)).*
+2. **Authenticate:** Click **Sign In with Opengates** to complete OAuth sign-in in your browser. *(New to Opengates? [Create a free account](https://www.opengates.app/signup).)* Free accounts get Bure, free Sparks every day.
 3. **Build:** Enter a prompt in the chat panel—for example, *"Add Zod input validation to the authentication routes and write unit tests"*—and press **Enter**.
 
 ---
@@ -53,10 +53,11 @@ Switch modes dynamically in the chat input bar to match the complexity of your t
 | **Plan** | Multi-file refactors, system architecture, complex migrations | Investigates your workspace and drafts a step-by-step technical spec before touching any code. |
 | **Interactive** | Pair programming, unfamiliar codebases, guided debugging | Asks clarifying questions first, aligns on the approach, and waits for confirmation at each step. |
 
-### Dual-Tier Intelligence: Fast vs. Thinking
-Toggle effortlessly between compute profiles directly from the model picker (your selection persists per workspace):
-* **Fast (`ola-code-fast`):** Optimized for sub-second latency, inline edits, boilerplate generation, syntax fixes, and rapid Q&A.
-* **Thinking (`ola-code-reason`):** Powered by deep-reasoning models for complex system architecture, tricky race conditions, and multi-file refactoring.
+### Three Models: Fast, Thinking and Pro
+Pick a model from the model picker (your selection persists per workspace):
+* **Fast (`ola-code-fast`):** Low latency for inline edits, boilerplate, syntax fixes and quick questions.
+* **Thinking (`ola-code-reason`):** Reasoning models for architecture, tricky bugs and multi-file refactoring.
+* **Pro (`ola-code-pro`):** The most capable models for the hardest tasks. A Pro task needs at least 150,000 Sparks to start, so it is unlikely to run short part-way.
 
 ---
 
@@ -81,20 +82,34 @@ Toggle effortlessly between compute profiles directly from the model picker (you
 
 ---
 
-## Plans & Sparks Usage
+## Sparks: Bure, Bundles and Top-ups
 
-Ola Code is built on Opengates' mission to democratize access to world-class software engineering tools. The Sparks pilot replaces separate token pools with one model-usage wallet across Fast, Thinking, and Pro.
+Every model call and web search uses Sparks, from one wallet shared with Ola on the web. 1,000,000 Sparks is USD 1 of model cost, charged at each model's published rates for input, cached input and output; web searches are charged at cost. Holds are temporary reservations, not charges.
 
-| Tier | Monthly subscription | Included Sparks | Web Searches |
-| :--- | :--- | :--- | :--- |
-| **Free Community** | Free | 200,000 | 5 / day |
-| **Builder / Pro** | USD 5 | 5,000,000 | 20 / day |
-| **Ultra** | USD 15 | 15,000,000 | 50 / day |
-| **Ultra Plus** | USD 30 | 30,000,000 | 50 / day |
+* **Bure (free):** Free accounts get 20,000 Sparks every day for Fast and Thinking, refilled at midnight East Africa Time. Unused Bure does not carry over, and on a very busy day free Sparks can pause until midnight.
+* **Bundles:** Buy more in KES from the Sparks view in Ola Code, paid through Paystack. Whatever ends soonest is spent first, so Bure and bundles are not wasted.
+* **Top-ups:** Sparks that never expire, spent last.
 
-1,000,000 Sparks represents USD 1 of model-cost capacity, not a cash balance. Actual input, cached input, cache-write and output usage consume Sparks at the selected model's published rates. Holds are temporary reservations, not charges. Included Sparks expire at the monthly reset; purchased Sparks survive it and are consumed after included Sparks. Measured interrupted calls remain chargeable; unknown usage is not charged. Ola covers external tool and search costs.
+| Bundle | Price (KES, VAT incl.) | Sparks | Lasts |
+| :--- | ---: | ---: | :--- |
+| Saa Moja | 10 | 40,000 | One hour |
+| Saa Tatu | 25 | 100,000 | Three hours |
+| Usiku | 20 | 100,000 | 11 PM to 5 AM |
+| Hadi Usiku | 40 | 170,000 | Until midnight (sold until 9 PM) |
+| Siku | 50 | 230,000 | One day |
+| Wiki | 250 | 1,200,000 | One week |
+| Mwezi | 650 | 3,400,000 | 30 days |
+| Mwezi Plus | 1,950 | 10,200,000 | 30 days |
+| Mwezi Max | 3,900 | 20,400,000 | 30 days |
+| Top-up 50 / 100 / 250 | 50 / 100 / 250 | 200,000 / 400,000 / 1,000,000 | Never expire |
 
-The account panel shows available, included, purchased and held Sparks and the next reset. It refreshes while open. Wallet UI appears only when the server supplies a real versioned wallet; older servers retain their explicitly labelled legacy token meters. New subscription prices are USD-only; checkout stays unavailable until USD collection is verified, and payment channels are confirmed by the payment provider rather than promised here.
+Mwezi, Mwezi Plus and Mwezi Max can renew every month on a card; cancel any time from the Sparks view. Prices can change; the Sparks view and [ola.opengates.app/bundles](https://ola.opengates.app/bundles) always show the current ones.
+
+**Zawadi:** invite a friend with your link from the Sparks view. When they join Ola and send five messages, you both get 100,000 Sparks for 7 days. [How Zawadi works](https://ola.opengates.app/zawadi).
+
+**Teams:** with Biashara, an organisation buys Sparks once and its staff use them within a monthly limit each. [Ola for teams](https://ola.opengates.app/biashara).
+
+The account panel shows your available Sparks, running bundles with their time left, held Sparks, your subscription and your Zawadi link, and refreshes while open.
 
 ---
 
@@ -103,7 +118,6 @@ The account panel shows available, included, purchased and held Sparks and the n
 * **OAuth 2.0 + PKCE Authentication:** Credentials are exchanged via RFC 7636 PKCE and stored exclusively inside VS Code's OS-level encrypted keychain (`SecretStorage`). Access tokens are never written to workspace files or exposed in logs.
 * **Scoped Context Transmission:** Ola only transmits the explicit prompts, file excerpts, and diagnostics required to fulfill your active request over TLS.
 * **Local-First Session Storage:** Conversation history and workspace checkpoints reside locally on your machine.
-* **Sensitive File Guardrails:** Dotfiles and secret artifacts (`.env*`, `*.pem`, `*.key`, credentials) are excluded from automatic context suggestions by default.
 
 ---
 
@@ -118,6 +132,7 @@ The account panel shows available, included, purchased and held Sparks and the n
 
 * **Help Center & Bug Reports:** [support.opengates.app](https://support.opengates.app)
 * **Platform & Account Management:** [www.opengates.app](https://www.opengates.app)
+* **Ola on the web:** [ola.opengates.app](https://ola.opengates.app)
 
 ---
 

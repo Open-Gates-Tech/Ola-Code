@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.6] (Preview)
+
+- Zawadi in the Sparks view: your invite link with a copy button, WhatsApp
+  sharing, how many friends have joined and been rewarded, and your own progress
+  if you joined with a friend's link.
+- Ola Code's Sparks messages now use its model names: Bure pays for Fast and
+  Thinking, and Pro needs 150,000 Sparks to start.
+- Refreshed the Marketplace page: KES bundles, top-ups and Bure instead of the
+  retired USD plans, web searches charged in Sparks, the Fast, Thinking and Pro
+  models, Zawadi and Biashara for teams.
+
 ## [0.1.5] (Preview)
 
 - Buy Sparks bundles and top-ups in KES from the Sparks view, and see running
@@ -8,8 +19,8 @@
   bundles can renew every month on a card. Pro, Ultra and Ultra Plus subscribers see
   when their plan becomes Mwezi, Mwezi Plus or Mwezi Max. The USD plans are gone.
 - Free accounts get Bure: free Sparks every day, refilled at midnight East Africa
-  Time, for Quick and Balanced.
-- Clear messages when Sparks run out: Bure's daily limit, Deep's 150,000-Spark
+  Time, for Fast and Thinking.
+- Clear messages when Sparks run out: Bure's daily limit, Pro's 150,000-Spark
   minimum, an empty balance, and an organisation's monthly limit or empty team
   Sparks, instead of a generic error or a long "try again in" countdown.
 

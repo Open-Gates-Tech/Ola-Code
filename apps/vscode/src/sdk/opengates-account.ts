@@ -9,12 +9,14 @@ import {
 	OpengatesSparksCall,
 	OpengatesSparksWallet,
 	OpengatesSubscriptionStatus,
+	OpengatesZawadi,
 } from "@/shared/proto/cline/account"
 import { Logger } from "@/shared/services/Logger"
 import type { OpengatesAuthService } from "./opengates-auth-service"
 import { createOpengatesFetch, OPENGATES_API_BASE_URL } from "./opengates-provider"
 import { subscriptionSchema, subscriptionStatus } from "./opengates-subscription"
 import { getOpengatesAgentTask } from "./opengates-task-budget"
+import { toZawadi, zawadiSchema } from "./opengates-zawadi"
 
 const exactAmount = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
 const hour = z.number().int().min(0).max(23)
@@ -194,6 +196,15 @@ export async function fetchOpengatesAccount(
 			Logger.warn("Could not load the Sparks subscription.", error)
 		}
 	}
+	let zawadi: OpengatesZawadi | undefined
+	if (account.sparks) {
+		try {
+			zawadi = toZawadi(await getJson(fetcher, "/zawadi", zawadiSchema))
+		} catch (error) {
+			// Zawadi may be switched off; the rest of the account still shows.
+			Logger.warn("Could not load Zawadi invites.", error)
+		}
+	}
 	let upgradeProduct: OpengatesProduct | undefined
 	if (account.tier === "free" && !account.sparks) {
 		// The plan details still render if the catalog is unavailable; only the upgrade offer is hidden.
@@ -257,6 +268,7 @@ export async function fetchOpengatesAccount(
 		products,
 		billingEnabled,
 		subscription,
+		zawadi,
 		tier: account.tier,
 		status: account.status,
 		creditsRemaining: account.credits_remaining,

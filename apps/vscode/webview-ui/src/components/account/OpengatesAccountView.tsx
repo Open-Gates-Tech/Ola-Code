@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { ClineUser } from "@/context/ClineAuthContext"
 import { AccountServiceClient } from "@/services/grpc-client"
 import { formatSparks, SparksUsage } from "./SparksUsage"
+import { ZawadiCard } from "./ZawadiCard"
 
 const TIER_LABELS: Record<string, string> = {
 	free: "Free",
@@ -217,7 +218,10 @@ export function OpengatesAccountView({ user }: { user: ClineUser }) {
 						{loadError}
 					</p>
 				) : account?.sparks ? (
-					<SparksUsage account={account} onChanged={() => void load()} />
+					<>
+						<SparksUsage account={account} onChanged={() => void load()} />
+						{account.zawadi && <ZawadiCard zawadi={account.zawadi} />}
+					</>
 				) : account ? (
 					<>
 						<UsageMeter allowance={account.fastLimit} label="Fast" remaining={account.fastRemaining} />
